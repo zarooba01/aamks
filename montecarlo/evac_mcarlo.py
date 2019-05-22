@@ -28,12 +28,16 @@ from include import Dump as dd
 from include import SimIterations
 from scipy.stats.distributions import lognorm
 
+from sklearn.cluster import MeanShift
+import numpy as np
+
 # }}}
 
 class EvacMcarlo():
     def __init__(self):# {{{
         ''' Generate montecarlo evac.conf. '''
 
+        self.rooms = list()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
         self.json=Json()
         self.conf=self.json.read("{}/conf.json".format(os.environ['AAMKS_PROJECT']))
@@ -129,15 +133,17 @@ class EvacMcarlo():
                 positions += list(zip(x, y))
                 for i in x:
                     self.pre_evacuation[floor].append(self._make_pre_evacuation(r['name'], r['type_sec']))
-            for name,r in evac_rooms['manual'].items():
+                    self.rooms.append(name)
+            for name,r in evac_rooms['manual'].items():   #mozna dodac
                 positions += r['pos']
                 for i in r['pos']:
                     self.pre_evacuation[floor].append(self._make_pre_evacuation(name, r['type_sec']))
+                    self.rooms.append(name)
             self.dispatched_evacuees[floor] = [list([int(i) for i in l]) for l in positions]
 # }}}
     def _make_evac_conf(self):# {{{
         ''' Write data to sim_id/evac.json. '''
-
+        clusters = self.clustering()
         self._evac_conf['FLOORS_DATA']=OrderedDict()
         for floor in self.floors:
             self._evac_conf['FLOORS_DATA'][floor]=OrderedDict()
@@ -154,22 +160,99 @@ class EvacMcarlo():
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['BETA_V']         = round(normal(self.conf['evacuees_beta_v']['mean']      , self.conf['evacuees_beta_v']['sd'])      , 2)
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['H_SPEED']        = round(normal(self.conf['evacuees_max_h_speed']['mean'] , self.conf['evacuees_max_h_speed']['sd']) , 2)
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['V_SPEED']        = round(normal(self.conf['evacuees_max_v_speed']['mean'] , self.conf['evacuees_max_v_speed']['sd']) , 2)
-
+                #self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['GROUP'] = clusters[i]
         self.json.write(self._evac_conf, "{}/workers/{}/evac.json".format(os.environ['AAMKS_PROJECT'],self._sim_id))
 
+    def find_nearest(self, center, points):
+
+        points = tuple(map(tuple, points))
+        dist_2 = np.sum((points - center) ** 2, axis=1)
+        print(dist_2)
+        return np.argmin(dist_2)
+
+
+
+    def divide_per_room(self):
+        pokoje = {}
+        for floor in self.floors:
+            #rooms = self._evac_rooms(floor)
+            #print(rooms['manual'])
+            for i in range(len(self.dispatched_evacuees[floor])):
+                if self.rooms[i] not in pokoje:
+                    pokoje[self.rooms[i]] = [self.dispatched_evacuees[floor][i]]
+                else:
+                    for j in pokoje:
+                        if j == self.rooms[i]:
+                            pokoje[j].append(self.dispatched_evacuees[floor][i])
+
+
+
+        return(pokoje)
+
+
+    def clustering(self):
+
+        a = self.divide_per_room()
+        ms = MeanShift()
+        grouped= []
+        centers = []
+        y = []
+        nearest = []
+        #for i, j in pokoje.items():
+        for i, j in a.items():
+            z = np.array(j)
+            ms.fit(z)
+            labels = ms.labels_
+            cluster_centers = ms.cluster_centers_
+            nearest.append(self.find_nearest(cluster_centers, z))
+            centers.append(cluster_centers)
+            clusters_ = len(np.unique(labels))
+            y.append(z)
+            for k in labels:
+                x = i + '_' + str(k)
+                grouped.append(x)
+            print('pokoj', i)
+            print('polozenie', j)
+            print('centra= ', centers)
+            print('najblizszy', nearest)
+
+        #print(grouped)
+        #print(nearest)
+
+
+
+        return grouped, nearest
+
+
+
+
+
+    # }}}
     def _evacuees_static_animator(self):# {{{
         ''' 
         For the animator. We just pick a single, newest sim_id and display
         evacuees init positions. Animator can use it when there are no worker
         provided animations (moving evacuees for specific sim_id). 
+
         '''
 
-        for floor in self.floors:
-            m=self.json.read("{}/workers/static.json".format(os.environ['AAMKS_PROJECT']))
-            m[floor]['evacuees']=self.dispatched_evacuees[floor]
-            m[floor]['sim_id']=self._sim_id
-            self.json.write(m,"{}/workers/static.json".format(os.environ['AAMKS_PROJECT']))
+        # TODO: see if we really need it
+        # static.json may not exist at this stage, so we preserve the data and
+        # the actual write happens in init.py 
+
+        pass
+        # m={}
+        # for floor in self.floors:
+        #     m[floor]['evacuees']=self.dispatched_evacuees[floor]
+        #     m[floor]['sim_id']=self._sim_id
+        # self.json.write(m,"{}/workers/static.json".format(os.environ['AAMKS_PROJECT']))
+
+        # self.s.query("CREATE TABLE dispatched_evacuees(json)")
+        # self.s.query('INSERT INTO floors_meta VALUES (?)', (json.dumps(self.floors_meta),))
         
 # }}}
 
 # }}}
+A = EvacMcarlo()
+#print(A.divide_per_room())
+A.clustering()
