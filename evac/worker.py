@@ -43,7 +43,7 @@ class Worker:
         self.start_time = time.time()
         self.floors = list()
         self.host_name = os.uname()[1]
-        os.chdir('/home/aamks_users')
+        os.chdir('/home/aamks_workers')
         os.environ["AAMKS_PROJECT"]='.'
         self.working_dir = self.url.split('aamks_users/')[1]
         self.cross_building_results = None
