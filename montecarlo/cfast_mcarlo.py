@@ -75,16 +75,16 @@ class CfastMcarlo():
             fire_origin.append(str(choice(self.all_corridors_and_halls)))
             fire_origin.append('non_room')
 
-        compa=self.s.query("SELECT * FROM aamks_geom WHERE name=? and type_pri='COMPA'", (fire_origin[0],))[0]
-        x=round(compa['width']/(2.0*100),2)
-        y=round(compa['depth']/(2.0*100),2)
-        z=round(compa['height']/100.0 * (1-math.log10(uniform(1,10))),2)
+        compa=self.s.query("SELECT * FROM aamks_geom WHERE name=?", (fire_origin[0],))[0]
+        x=round(compa['x0']/100+compa['width']/(2.0*100),2)
+        y=round(compa['y0']/100+compa['depth']/(2.0*100),2)
+        z=round(compa['z0']/100+compa['height']/100.0 * (1-math.log10(uniform(1,10))),2)
 
         fire_origin+=[x,y,z]
         fire_origin+=[compa['floor']]
         self._save_fire_origin(fire_origin)
 
-        collect=('FIRE', compa['global_type_id'], x, y, z, 1, 'TIME' ,'0','0','0','0','medium')
+        collect=('FIRE', compa['global_type_id'], round(compa['width']/(2.0*100),2), round(compa['depth']/(2.0*100),2), z, 1, 'TIME' ,'0','0','0','0','medium')
         return (','.join(str(i) for i in collect))
 
 # }}}
@@ -268,7 +268,7 @@ class CfastMcarlo():
 
         txt=(
         'VERSN,7,{}_{}'.format('SIM', self.conf['project_id']),
-        'TIMES,600,-120,10,10',
+        'TIMES,{},-120,10,10'.format(self.conf['simulation_time']),
         'EAMB,{},101300,0'.format(273+outdoor_temp),
         'TAMB,293.15,101300,0,50',
         'DTCHECK,1.E-9,100',
@@ -485,12 +485,12 @@ class CfastMcarlo():
     def _fire_obstacle(self):# {{{
         '''
         Fire Obstacle prevents humans to walk right through the fire. Currently
-        we build the rectangle 200x200 around x,y. Perhaps Aamks could scale
-        the fire obstacle to match fire size.
+        we build the rectangle xx * yy around x,y. Perhaps this size could be
+        some function of fire properties.
         '''
 
-        xx=100
-        yy=100
+        xx=150
+        yy=150
 
         z=self.s.query("SELECT * FROM fire_origin") 
         i=z[0]
@@ -498,12 +498,11 @@ class CfastMcarlo():
         i['y']=int(i['y'] * 100)
         i['z']=int(i['z'] * 100)
 
-        points=[ [i['x']-xx, i['y']-yy], [i['x']+xx, i['y']-yy], [i['x']+xx, i['y']+yy], [i['x']-xx, i['y']+yy], [i['x']-xx, i['y']-yy], None ]
-        named={ 'x0': i['x']-100, 'y0': i['y']-100, 'width': 2*xx, 'depth': 2*yy, 'display': None }
+        points=[ [i['x']-xx, i['y']-yy], [i['x']+xx, i['y']-yy], [i['x']+xx, i['y']+yy], [i['x']-xx, i['y']+yy], [i['x']-xx, i['y']-yy] ]
 
         obstacles=self.json.readdb("obstacles")
-        obstacles['points'][i['floor']].append(points)
-        obstacles['named'][i['floor']].append(named)
+        obstacles['fire_obstacle']=points
+        obstacles['fire_obstacle_floor']=i['floor'] 
 
         self.s.query("UPDATE obstacles SET json=?", (json.dumps(obstacles),)) 
 
