@@ -36,6 +36,7 @@ import numpy as np
 class EvacMcarlo():
     def __init__(self):# {{{
         ''' Generate montecarlo evac.conf. '''
+        dd(os.environ['AAMKS_PROJECT'])
 
         self.rooms = list()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
@@ -51,6 +52,7 @@ class EvacMcarlo():
             self._dispatch_evacuees()
             self._make_evac_conf()
         self._evacuees_static_animator()
+        #self.clustering()
 
 # }}}
     def _static_evac_conf(self):# {{{
@@ -143,7 +145,8 @@ class EvacMcarlo():
 # }}}
     def _make_evac_conf(self):# {{{
         ''' Write data to sim_id/evac.json. '''
-        clusters = self.clustering()
+        #clusters = self.clustering()
+        #clusters = self.clustering()
         self._evac_conf['FLOORS_DATA']=OrderedDict()
         for floor in self.floors:
             self._evac_conf['FLOORS_DATA'][floor]=OrderedDict()
@@ -167,7 +170,7 @@ class EvacMcarlo():
 
         points = tuple(map(tuple, points))
         dist_2 = np.sum((points - center) ** 2, axis=1)
-        print(dist_2)
+        #print(dist_2)
         return np.argmin(dist_2)
 
 
@@ -211,6 +214,7 @@ class EvacMcarlo():
             for k in labels:
                 x = i + '_' + str(k)
                 grouped.append(x)
+                """
             print('pokoj', i)
             print('polozenie', j)
             print('centra= ', centers)
@@ -218,7 +222,7 @@ class EvacMcarlo():
 
         #print(grouped)
         #print(nearest)
-
+        """
 
 
         return grouped, nearest
@@ -253,6 +257,5 @@ class EvacMcarlo():
 # }}}
 
 # }}}
-A = EvacMcarlo()
-#print(A.divide_per_room())
-A.clustering()
+#A = EvacMcarlo()
+# (A.divide_per_room())
