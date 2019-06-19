@@ -36,7 +36,6 @@ import numpy as np
 class EvacMcarlo():
     def __init__(self):# {{{
         ''' Generate montecarlo evac.conf. '''
-        dd(os.environ['AAMKS_PROJECT'])
 
         self.rooms = list()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
@@ -52,7 +51,7 @@ class EvacMcarlo():
             self._dispatch_evacuees()
             self._make_evac_conf()
         self._evacuees_static_animator()
-        #self.clustering()
+        self.clustering()
 
 # }}}
     def _static_evac_conf(self):# {{{
