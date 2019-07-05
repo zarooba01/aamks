@@ -10,7 +10,7 @@ import getopt
 from pprint import pprint
 import codecs
 from subprocess import Popen,call
-
+import numpy
 from numpy.random import choice
 from numpy.random import uniform
 from numpy.random import normal
@@ -169,7 +169,6 @@ class EvacMcarlo():
 
         points = tuple(map(tuple, points))
         dist_2 = np.sum((points - center) ** 2, axis=1)
-        #print(dist_2)
         return np.argmin(dist_2)
 
 
@@ -186,9 +185,6 @@ class EvacMcarlo():
                     for j in pokoje:
                         if j == self.rooms[i]:
                             pokoje[j].append(self.dispatched_evacuees[floor][i])
-
-
-
         return(pokoje)
 
 
@@ -200,29 +196,20 @@ class EvacMcarlo():
         centers = []
         y = []
         nearest = []
-        #for i, j in pokoje.items():
         for i, j in a.items():
+            #i to pokoj, j to polozenia
             z = np.array(j)
             ms.fit(z)
             labels = ms.labels_
             cluster_centers = ms.cluster_centers_
-            nearest.append(self.find_nearest(cluster_centers, z))
+            for x in cluster_centers:
+                self.find_nearest(x,z)
             centers.append(cluster_centers)
             clusters_ = len(np.unique(labels))
             y.append(z)
             for k in labels:
                 x = i + '_' + str(k)
                 grouped.append(x)
-                """
-            print('pokoj', i)
-            print('polozenie', j)
-            print('centra= ', centers)
-            print('najblizszy', nearest)
-
-        #print(grouped)
-        #print(nearest)
-        """
-
 
         return grouped, nearest
 
@@ -256,5 +243,6 @@ class EvacMcarlo():
 # }}}
 
 # }}}
-#A = EvacMcarlo()
-# (A.divide_per_room())
+
+
+
