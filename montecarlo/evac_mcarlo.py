@@ -174,6 +174,7 @@ class EvacMcarlo():
 
 
     def divide_per_room(self):
+        """zwraca liste pokoi ktore znajduja sie na pietrach"""
         pokoje = {}
         for floor in self.floors:
             #rooms = self._evac_rooms(floor)
@@ -190,27 +191,32 @@ class EvacMcarlo():
 
     def clustering(self):
 
-        a = self.divide_per_room()
+        a = self.divide_per_room()  #dzielenie na pokoje - a to pokoje na pietrze
         ms = MeanShift()
-        grouped= []
-        centers = []
-        y = []
+        grouped = []
         nearest = []
+        y = 0
         for i, j in a.items():
             #i to pokoj, j to polozenia
             z = np.array(j)
             ms.fit(z)
             labels = ms.labels_
             cluster_centers = ms.cluster_centers_
-            for x in cluster_centers:
-                self.find_nearest(x,z)
-            centers.append(cluster_centers)
-            clusters_ = len(np.unique(labels))
-            y.append(z)
+            for center in cluster_centers:
+                nearest.append(self.find_nearest(center,z))
+            #clusters_ = len(np.unique(labels))
+            tux = 0
+            y+=1
             for k in labels:
                 x = i + '_' + str(k)
-                grouped.append(x)
-
+                #lista nearest za kazdym razem jest inna
+                if tux == nearest[y]:
+                    x = x + '_chef'
+                    grouped.append(x)
+                else:
+                    grouped.append(x)
+                tux +=1
+        print(nearest)
         return grouped, nearest
 
 
