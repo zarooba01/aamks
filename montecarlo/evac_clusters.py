@@ -35,7 +35,7 @@ from include import Vis
 from scipy.stats.distributions import lognorm
 from sklearn.cluster import MeanShift
 from include import GetUserPrefs
-
+import random
 
 # }}}
 
@@ -51,6 +51,7 @@ class EvacClusters():
         self.conf=self.json.read("{}/conf.json".format(os.environ['AAMKS_PROJECT']))
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
         self.dispatched_evacuees=self.json.readdb("dispatched_evacuees")
+        #dodanie bazy danych - cfast importer 164-165
         self.conf=self.json.read("{}/conf.json".format(os.environ['AAMKS_PROJECT']))
         self.evacuee_radius=self.json.read('{}/inc.json'.format(os.environ['AAMKS_PATH']))['evacueeRadius']
 
@@ -79,6 +80,9 @@ class EvacClusters():
         return points[np.argmin(dist_2)]
 # }}}
     def _clustering(self):# {{{
+
+        self.s.query("CREATE TABLE clustering_info(room varchar, cluster int, number int, lead_x float,lead_y float, pos_x float,pos_y float, agent_type varchar)")
+
         ms = MeanShift()
         self.clusters = {}
         for floor,rooms in self._dispatched_rooms.items():
@@ -89,17 +93,24 @@ class EvacClusters():
                 ms.fit(z)
                 cluster_centers = ms.cluster_centers_
                 labels = ms.labels_
+
                 for i in sorted(labels):
                     self.clusters[floor][room][i]=OrderedDict([('agents', [])])
-
                 for idx,i in enumerate(labels):
                     self.clusters[floor][room][i]['agents'].append(self._dispatched_rooms[floor][room][idx])
+                    pos_x,pos_y = self._dispatched_rooms[floor][room][idx]
                 for idx,i in enumerate(labels):
                     self.clusters[floor][room][i]['center']=cluster_centers[i]
                     self.clusters[floor][room][i]['leader']=self._cluster_leader(cluster_centers[i], self.clusters[floor][room][i]['agents'])
-        #dd(self.clusters['0']['r1'])
+                    """adding parameters to database"""
+                    types = ['active','conservative','herding', 'follower']
+                    to_database = [room, i, idx,  self.clusters[floor][room][i]['leader'][0], self.clusters[floor][room][i]['leader'][1], self.clusters[floor][room][i]['agents'][0][0],self.clusters[floor][room][i]['agents'][0][1], random.choice(types)]
 
+                    self.s.query("INSERT INTO clustering_info VALUES (?,?,?,?,?,?,?,?)", to_database)
+
+        #dd(self.clusters['0']['r1'])
 # }}}
+
     def _vis_clusters(self):# {{{
         '''
         We have 9 colors for clusters and 1 color for the leader of the cluster
