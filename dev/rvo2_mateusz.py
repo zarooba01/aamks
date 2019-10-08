@@ -29,6 +29,10 @@ from schody import Agent
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
 
+#dump_geom printuje
+
+#set_sim.....
+
 class Queue(Queue):
     def set_position(self, positions):
         for i, agent in enumerate(self.queue):
@@ -42,7 +46,7 @@ class Queue(Queue):
         self.sim = sim
 
 class Prepare_Queues:
-    def __init__(self, floors=3, number_queues=1, width=1000, height=1000, offsetx=5600, offsety=0):# {{{
+    def __init__(self, floors=3, number_queues=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
         self.floors = floors
         self.number_queues = number_queues
         self.width = width
@@ -65,11 +69,12 @@ class Prepare_Queues:
         lenght_steps = (self.width+self.lenght)/self.size
         for i in range(self.size):
             l = i*lenght_steps
-            x = self.offsetx+l*cos_alfa
-            y = self.offsety+floor*self.height+l*sin_alfa
             if l>self.lenght:
                 x = self.offsetx+lenght_steps*(self.size-i)
                 y = self.offsety+floor*self.height+self.height
+            else:
+                x = self.offsetx+l*cos_alfa
+                y = self.offsety+floor*self.height+l*sin_alfa
             positions.append((x,y))
         return positions# }}}
     def create_positions(self):# {{{
@@ -88,8 +93,8 @@ class Prepare_Queues:
     def listed_ques(self):# {{{
         for i in self.ques:
             #i.give_location()
-            #print(i.queue)# }}}
-            print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])
+            #print(i.queue)            
+            print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
     def set_sim(self, sim):# {{{
         for i in self.ques:
             i.set_sim(sim)# }}}
@@ -99,50 +104,19 @@ class EvacEnv:
         self.Que = Prepare_Queues()
         self.json=Json()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
+
         self.evacuee_radius=self.json.read("{}/inc.json".format(os.environ['AAMKS_PATH']))['evacueeRadius']
         time=1
-        #self.sim rvo2.PyRVOSimulator TIME_STEP , NEIGHBOR_DISTANCE , MAX_NEIGHBOR , TIME_HORIZON , TIME_HORIZON_OBSTACLE , RADIUS , MAX_SPEED
-        self.sim=rvo2.PyRVOSimulator(time,40,5,time,time,self.evacuee_radius,30)
-        self.Que.set_sim(self.sim)
-        self.door1='d11'
-        self.door2=(6100,2100)
-        self._create_teleports()
+        self.sim = rvo2.PyRVOSimulator(time     , 40                , 5            , time         , time                  , self.evacuee_radius , 30)
+        self._anim={"simulation_id": 1, "simulation_time": 20, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
         self._create_agents()
         self._load_obstacles()
-        self._anim={"simulation_id": 1, "simulation_time": 20, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
         self._write_zip()
-        self._run()
         Vis({'highlight_geom': None, 'anim': '1/f1.zip', 'title': 'x', 'srv': 1})
 
 # }}}
-    def _create_teleports(self):# {{{
-        '''
-        TODO: non-multifloor stairacases cause the need to try/except here. 
-        geom.py should handle sX.Y naming better.
-        '''
-        self._teleport_from={}
-        for i in self.s.query("SELECT name,center_x,center_y,vent_to_name  FROM world2d WHERE vent_to_name LIKE 's%'"):
-            target=i['vent_to_name'].replace(".", "|")
-            tt=self.s.query("SELECT x0,y0 FROM world2d WHERE name=?", (target,))
-            try:
-                #self._teleport_from[(i['name'], (i['center_x'], i['center_y']), i['vent_to_name'])]=(target, (tt[0]['x0'], tt[0]['y0']))
-                self._teleport_from[i['name']]=(target, (tt[0]['x0']+self.evacuee_radius*2, tt[0]['y0']+self.evacuee_radius*2))
-            except:
-                pass
-        #dd(self._teleport_from)
-# }}}
-    def _positions(self):# {{{
-        frame=[]
-        for k,v in self.agents.items():
-            pos=[round(i) for i in self.sim.getAgentPosition(v['id'])]
-            frame.append([pos[0],pos[1],0,0,"N",1])
-            #print(k,",t:", self.sim.getGlobalTime(), ",pos:", pos, ",v:", [ round(i) for i in self.sim.getAgentVelocity(v['id'])])
-        #print(frame)
-        self._anim["animations"]["evacuees"].append(frame)
-# }}}
     def _create_agents(self):# {{{
-        door=self.s.query("SELECT center_x, center_y  FROM world2d WHERE name=?", (self.door1,))[0]
-        z=self.s.query("SELECT * FROM world2d WHERE type_pri='EVACUEE'" )
+        z=self.s.query("SELECT * FROM aamks_geom WHERE type_pri='EVACUEE'" )
         self.agents={}
         for i in z:
             aa=i['name']
@@ -150,48 +124,66 @@ class EvacEnv:
             ii=self.sim.addAgent((i['x0'],i['y0']))
             self.agents[aa]['name']=aa
             self.agents[aa]['id']=ii
-            self.sim.setAgentPrefVelocity(ii, (200,0))
+            self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
-            self.agents[aa]['target']=(door['center_x'], door['center_y'])
+            self.agents[aa]['origin']=(i['x0'],i['y0'])
+            self.agents[aa]['target']=(1000, i['y0'])
+        self._positions()
 # }}}
     def _load_obstacles(self):# {{{
-        obstacles=self.json.readdb('world2d_obstacles')['points']
+        z=self.json.readdb('obstacles')
+        obstacles=z['obstacles']['0']
         for i in obstacles:
             self.sim.addObstacle([ (o[0],o[1]) for o in i[:4] ])
             self.sim.processObstacles()
 # }}}
     def _velocity(self,a): # {{{
-        x=a['target'][0] - self.sim.getAgentPosition(a['id'])[0]
-        y=a['target'][1] - self.sim.getAgentPosition(a['id'])[1]
-        if abs(x) + abs(y) < 30:
-            if y < 1030:
+        '''
+        radius=3.5 is the condition for the agent to reach the behind-doors target 
+        '''
+
+        dx=a['target'][0] - self.sim.getAgentPosition(a['id'])[0]
+        dy=a['target'][1] - self.sim.getAgentPosition(a['id'])[1]
+        self.sim.setAgentPrefVelocity(a['id'], (dx,dy))
+        if dx < 30:
+            if self.sim.getAgentPosition(a['id'])[1] < 705:
                 floor = 2
-            elif y > 1030 and y < 3400:
+            elif self.sim.getAgentPosition(a['id'])[1] > 705 and self.sim.getAgentPosition(a['id'])[1] < 1850:
                 floor = 1
             else:
                 floor = 0
             self.Que.add_to_queues(floor, a['id'])
-            #print(self.sim.getAgentPosition(a['id']))
-            #self.sim.setAgentPosition(a['id'], self._teleport_from[self.door1][1])
-            a['target']=self.door2
-        else:
-            self.sim.setAgentPrefVelocity(a['id'], (x,y))
+            a['target']=(1750, 2955)
+        return sqrt(dx**2 + dy**2)
         
+# }}}
+    def _positions(self):# {{{
+        frame=[]
+        for k,v in self.agents.items():
+            pos=[round(i) for i in self.sim.getAgentPosition(v['id'])]
+            frame.append([pos[0],pos[1],0,0,"N",1])
+        self._anim["animations"]["evacuees"].append({"0": frame})
 # }}}
     def _update(self):# {{{
         for k,v in self.agents.items():
-            self._velocity(self.agents[k])
+            target_dist=self._velocity(self.agents[k])
+            if target_dist <= self.evacuee_radius * 3.5:
+                #dd(self.agents[k]['id'], target_dist)
+                pass
+                #exit()
+
         self._positions();
 # }}}
     def _write_zip(self):# {{{
         d="{}/workers/1".format(os.environ['AAMKS_PROJECT'])
+        dd(self._anim['animations']['evacuees'])
 
         zf=zipfile.ZipFile("{}/f1.zip".format(d), 'w')
         zf.writestr("anim.json", json.dumps(self._anim))
         zf.close()
 # }}}
     def _run(self):# {{{
-        for t in range(30):
+        for t in range(40):
             self.sim.doStep()
             self._update()
             #print([x for x in self.que.que() if x is not None])
@@ -200,3 +192,5 @@ class EvacEnv:
 # }}}
 
 e=EvacEnv()
+e.Que.set_sim(e.sim)
+e._run()
