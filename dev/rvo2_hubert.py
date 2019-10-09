@@ -40,9 +40,10 @@ class EvacEnv:
 
 # }}}
     def _create_agents(self):# {{{
-        z=self.s.query("SELECT * FROM aamks_geom WHERE type_pri='EVACUEE'" )
+        z =self.s.query("SELECT * FROM aamks_geom WHERE type_pri='EVACUEE'" )
+        x =self.s.query("SELECT * FROM clustering_info" )
         self.agents={}
-        for i in z:
+        for i,j in zip(z, x):
             aa=i['name']
             self.agents[aa]={}
             ii=self.sim.addAgent((i['x0'],i['y0']))
@@ -51,8 +52,10 @@ class EvacEnv:
             self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
             self.agents[aa]['origin']=(i['x0'],i['y0'])
-            self.agents[aa]['target']=(i['x0']+1000, i['y0'])
+            self.agents[aa]['target']=(j['lead_x'],j['lead_y'])   #leader's center needed
+            #self.agents[aa]['target']=(i['x0'] + 1000, i['y0']+100)
         self._positions()
+
 # }}}
     def _load_obstacles(self):# {{{
         z=self.json.readdb('obstacles')
@@ -91,6 +94,7 @@ class EvacEnv:
 # }}}
     def _write_zip(self):# {{{
         d="{}/workers/1".format(os.environ['AAMKS_PROJECT'])
+        dd(self._anim['animations']['evacuees'])
         dd(self._anim['animations']['evacuees'])
 
         zf=zipfile.ZipFile("{}/f1.zip".format(d), 'w')

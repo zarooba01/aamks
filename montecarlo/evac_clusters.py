@@ -104,10 +104,11 @@ class EvacClusters():
                     self.clusters[floor][room][i]['leader']=self._cluster_leader(cluster_centers[i], self.clusters[floor][room][i]['agents'])
                     """adding parameters to database"""
                     types = ['active','conservative','herding', 'follower']
-                    to_database = [room, i, idx,  self.clusters[floor][room][i]['leader'][0], self.clusters[floor][room][i]['leader'][1], self.clusters[floor][room][i]['agents'][0][0],self.clusters[floor][room][i]['agents'][0][1], random.choice(types)]
+                    to_database = [room, int(i), idx,  self.clusters[floor][room][i]['leader'][0], self.clusters[floor][room][i]['leader'][1], self.clusters[floor][room][i]['agents'][0][0],self.clusters[floor][room][i]['agents'][0][1], random.choice(types)]
 
                     self.s.query("INSERT INTO clustering_info VALUES (?,?,?,?,?,?,?,?)", to_database)
-
+        base = self.s.query("SELECT * FROM clustering_info")
+        #return base
         #dd(self.clusters['0']['r1'])
 # }}}
 
