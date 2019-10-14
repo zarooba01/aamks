@@ -32,23 +32,27 @@ class Queue:
                     return 0
         else:
             if not random.randint(0,3):
-                self.insert(floor, data)
-                return 1
+                if self.insert(floor, data):
+                    return 1
             else:
                 return 0
 
     def insert(self, floor, data):
-        self.queue.insert(floor*self.floor_space, data)
         for i in range(floor*self.floor_space, len(self.queue)):
             if self.queue[i] is None:
                 del self.queue[i]
+                self.queue.insert(floor*self.floor_space, data)
+                return 1
                 break
+            else:
+                return 0
 
     def pop(self):
         data = self.queue.pop(0)
         self.queue.append(None)
         if data is not None:
-            print(data, "pop")
+            #print(data, "pop")
+            pass
 
     def set_position(self, positions):
         for i, agent in enumerate(self.queue):

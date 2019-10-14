@@ -29,21 +29,22 @@ from schody import Agent
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
 
-#dump_geom printuje
-
-#set_sim.....
+#if something:
+#    do with something
 
 class Queue(Queue):
-    def set_position(self, positions):
-        for i, agent in enumerate(self.queue):
-            if agent is not None:
-                self.sim.setAgentPosition(agent, positions[i])
-    def give_location(self):
-        for i in self.queue:
-            if i is not None:
-                print(self.sim.getAgentPosition(i))
-    def set_sim(self, sim):
-        self.sim = sim
+    def set_position(self,positions):
+        pass
+    def give_index(self, agent_id):
+        return self.queue.index(agent_id)
+    def pop(self):
+        data=self.queue.pop(0)
+        self.queue.append(None)
+    def check_if_in_que(self, agent_id):
+        if agent_id in self.queue:
+            return 1
+        else:
+            return 0
 
 class Prepare_Queues:
     def __init__(self, floors=3, number_queues=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
@@ -75,7 +76,7 @@ class Prepare_Queues:
             else:
                 x = self.offsetx+l*cos_alfa
                 y = self.offsety+floor*self.height+l*sin_alfa
-            positions.append((x,y))
+            positions.append([x,y])
         return positions# }}}
     def create_positions(self):# {{{
         positions = []
@@ -92,12 +93,16 @@ class Prepare_Queues:
             i.go_on(self.positions)# }}}
     def listed_ques(self):# {{{
         for i in self.ques:
+            pass
             #i.give_location()
             #print(i.queue)            
-            print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
-    def set_sim(self, sim):# {{{
+            #print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
+    def check_if_in(self, agent_id):
         for i in self.ques:
-            i.set_sim(sim)# }}}
+            if i.check_if_in_que(agent_id):
+                return self.positions[i.give_index(agent_id)]
+            else:
+                return 0
 
 class EvacEnv:
     def __init__(self):# {{{
@@ -111,7 +116,6 @@ class EvacEnv:
         self._anim={"simulation_id": 1, "simulation_time": 20, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
         self._create_agents()
         self._load_obstacles()
-        self._write_zip()
         Vis({'highlight_geom': None, 'anim': '1/f1.zip', 'title': 'x', 'srv': 1})
 
 # }}}
@@ -145,7 +149,7 @@ class EvacEnv:
         dx=a['target'][0] - self.sim.getAgentPosition(a['id'])[0]
         dy=a['target'][1] - self.sim.getAgentPosition(a['id'])[1]
         self.sim.setAgentPrefVelocity(a['id'], (dx,dy))
-        if dx < 30:
+        if dx < 40:
             if self.sim.getAgentPosition(a['id'])[1] < 705:
                 floor = 2
             elif self.sim.getAgentPosition(a['id'])[1] > 705 and self.sim.getAgentPosition(a['id'])[1] < 1850:
@@ -153,14 +157,18 @@ class EvacEnv:
             else:
                 floor = 0
             self.Que.add_to_queues(floor, a['id'])
-            a['target']=(1750, 2955)
+            a['target']=(2750, 2955)
+            self.sim.setAgentPosition(a['id'], (0,0))
         return sqrt(dx**2 + dy**2)
         
 # }}}
     def _positions(self):# {{{
         frame=[]
         for k,v in self.agents.items():
-            pos=[round(i) for i in self.sim.getAgentPosition(v['id'])]
+            if self.Que.check_if_in(v['id']):
+                pos=self.Que.check_if_in(v['id'])
+            else:
+                pos=[round(i) for i in self.sim.getAgentPosition(v['id'])]
             frame.append([pos[0],pos[1],0,0,"N",1])
         self._anim["animations"]["evacuees"].append({"0": frame})
 # }}}
@@ -171,19 +179,18 @@ class EvacEnv:
                 #dd(self.agents[k]['id'], target_dist)
                 pass
                 #exit()
-
         self._positions();
 # }}}
     def _write_zip(self):# {{{
         d="{}/workers/1".format(os.environ['AAMKS_PROJECT'])
-        dd(self._anim['animations']['evacuees'])
+        #dd(self._anim['animations']['evacuees'])
 
         zf=zipfile.ZipFile("{}/f1.zip".format(d), 'w')
         zf.writestr("anim.json", json.dumps(self._anim))
         zf.close()
 # }}}
     def _run(self):# {{{
-        for t in range(40):
+        for t in range(20):
             self.sim.doStep()
             self._update()
             #print([x for x in self.que.que() if x is not None])
@@ -192,5 +199,5 @@ class EvacEnv:
 # }}}
 
 e=EvacEnv()
-e.Que.set_sim(e.sim)
 e._run()
+e._write_zip()
