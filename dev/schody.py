@@ -16,9 +16,6 @@ class Queue:
         self.floor_space = floor_space
         self.queue = floor*floor_space*[None]
         self.moved = False
-        self.chance = {}
-        for i in range(floor):
-            self.chance[i]=False
 
     def __repr__(self):
         return str(self.name)+"-queue"
@@ -27,8 +24,9 @@ class Queue:
         ''' Add append data on the floor when the space
         at the floor is free and above cell is free, 
         if above cell is taken, there is lottery between
-        appended and resident
-        if 
+        appended and resident - 33%
+        if the space at the floor and above cell is taken, 
+        data is insert into queue 
         '''
 
         if self.queue[floor*self.floor_space] is None:
@@ -36,24 +34,20 @@ class Queue:
                 self.queue[floor*self.floor_space] = data
                 return True
             else:
-                if not self.chance[floor]:
-                    if not random.randint(0,3):
-                        self.chance[floor] = True
-                        self.queue[floor*self.floor_space] = data
-                        return True
-                    else:
-                        return False
-        else:
-            if not self.chance[floor]:
                 if not random.randint(0,3):
-                    if not self.moved:
-                        self.chance[floor] = True
-                        self.moved = True
-                        #self.insert(floor, data)
-                        self.queue.insert(floor*self.floor_space+1, data)
-                        return True
-                    else:
-                        return False
+                    self.queue[floor*self.floor_space] = data
+                    return True
+                else:
+                    return False
+        else:
+            if not random.randint(0,3):
+                if not self.moved:
+                    self.moved = True
+                    #self.insert(floor, data)
+                    self.queue.insert(floor*self.floor_space, data)
+                    return True
+                else:
+                    return False
 
     def insert(self, floor, data):
         deleted = False

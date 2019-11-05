@@ -39,29 +39,22 @@ class Queue(Queue):
         else:
             return False# }}}
     def pop(self):# {{{
-        self.equal_opportunities()
         data = self.queue.pop(0)
         self.queue.append(None)
         if data is not None:
             #print(data)
             return True# }}}
     def pop_none(self):# {{{
-        self.equal_opportunities()
         if self.queue[0] is None:
             self.queue.pop(0)
             self.queue.append(None)# }}}
     def only_pop(self):# {{{
-        self.equal_opportunities()
         data = self.queue.pop(0)
         #print(data, "*")
         if data is not None:
             return True
         else:
             return False# }}}
-    def equal_opportunities(self):# {{{
-        self.chance = dict.fromkeys(self.chance, False)# }}}
-    def give_position(self):# {{{
-        return [(x,i) for x,i in enumerate(self.queue) if i is not None]# }}}
 
 
 class Prepare_Queues:
@@ -106,6 +99,8 @@ class Prepare_Queues:
         for i in self.ques:
             if i.add(floor, data):
                 return True
+            #else:
+            #    return False
                 # }}}
     def move(self):# {{{
         agent_dropped = 0
@@ -130,12 +125,18 @@ class Prepare_Queues:
             #print(i.queue)            
             #print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
     def check_if_in(self, agent_id):# {{{
-        for i in self.ques:
-            if i.check_if_in_que(agent_id):
-                return self.positions[i.give_index(agent_id)]
-            else:
-                return False# }}}
-
+        #for i in self.ques:
+        #    if i.check_if_in_que(agent_id):
+        #        return self.positions[i.give_index(agent_id)]
+        #    else:
+        #        return False
+        for i in range(len(self.ques)):
+            if self.ques[i].check_if_in_que(agent_id):
+                x,y = self.positions[self.ques[i].give_index(agent_id)]
+                x += i*100
+                y += i*100
+                return [x,y]
+# }}}
 class EvacEnv:
     def __init__(self):# {{{
         self.Que = Prepare_Queues()
@@ -235,11 +236,15 @@ class EvacEnv:
     def _add_to_staircase(self):# {{{
         try:
             for floor in self.waitings.keys():
+                #print(floor, len(self.waitings[floor]))
+#liczba oczekujących na danym piętrze
                 agentname, agentid = self.waitings[floor][0]
                 if self.Que.add_to_queues(floor, agentid):
                     self.agents[agentname]['target']=(1750, 2955)
                     self.sim.setAgentPosition(agentid, (0,0))
                     del self.waitings[floor][0]
+                    if len(self.waitings[floor])==0:
+                        del self.waitings[floor]
         except:
             pass# }}}
     def _run(self):# {{{
@@ -257,13 +262,10 @@ class EvacEnv:
 e=EvacEnv()
 e._run()
 e._write_zip()
-# dwie kolejki jedno wyjście
-# wchodzenie z dwóch stron
 # prędkość od gęstośći, zmierzyć w ilu krokach wychodzi
 # z 3 piętra wyjście na 2 piętro
 # wchodzenie pod górę
 # część wspólna z poprzedniej kolejki, prędkość 0, reszta jeden krok
-# ile osób chce dojść
 
 # czy po insercie pauza całej kolejki czy danych pięter? 
 # jeżeli z wcześniejszej kolejki został wypuszczony, co z insertem w tej kolejce?
