@@ -15,45 +15,64 @@ class Queue:
         self.floor = floor
         self.floor_space = floor_space
         self.queue = floor*floor_space*[None]
+        self.moved = False
+        self.chance = {}
+        for i in range(floor):
+            self.chance[i]=False
 
     def __repr__(self):
         return str(self.name)+"-queue"
 
     def add(self, floor, data):
+        ''' Add append data on the floor when the space
+        at the floor is free and above cell is free, 
+        if above cell is taken, there is lottery between
+        appended and resident
+        if 
+        '''
+
         if self.queue[floor*self.floor_space] is None:
             if self.queue[floor*self.floor_space+1] is None:
                 self.queue[floor*self.floor_space] = data
-                return 1
+                return True
             else:
-                if not random.randint(0,3):
-                    self.queue[floor*self.floor_space] = data
-                    return 1
-                else:
-                    return 0
+                if not self.chance[floor]:
+                    if not random.randint(0,3):
+                        self.chance[floor] = True
+                        self.queue[floor*self.floor_space] = data
+                        return True
+                    else:
+                        return False
         else:
-            if not random.randint(0,3):
-                if self.insert(floor, data):
-                    return 1
-            else:
-                return 0
+            if not self.chance[floor]:
+                if not random.randint(0,3):
+                    if not self.moved:
+                        self.chance[floor] = True
+                        self.moved = True
+                        #self.insert(floor, data)
+                        self.queue.insert(floor*self.floor_space+1, data)
+                        return True
+                    else:
+                        return False
 
     def insert(self, floor, data):
-        for i in range(floor*self.floor_space, len(self.queue)):
-            if self.queue[i] is None:
-                del self.queue[i]
-                self.queue.insert(floor*self.floor_space, data)
-                return 1
-                break
-            else:
-                return 0
+        deleted = False
+        if not self.moved:
+            self.queue.insert(floor*self.floor_space+1, data)
+            #for i in range(floor*self.floor_space, len(self.queue)):
+            for i in range(0, floor*self.floor_space):
+                if self.queue[i] is None:
+                    del self.queue[i]
+                    deleted = True
+                    break
+            if not deleted:
+                self.queue.pop(0)
+                self.moved = True
 
     def pop(self):
+        self.moved = False
         data = self.queue.pop(0)
         self.queue.append(None)
-        if data is not None:
-            #print(data, "pop")
-            pass
-
     def set_position(self, positions):
         for i, agent in enumerate(self.queue):
             if agent is not None:

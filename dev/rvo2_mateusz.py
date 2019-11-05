@@ -1,4 +1,3 @@
-
 # MODULES {{{
 import warnings
 warnings.simplefilter('ignore', RuntimeWarning)
@@ -29,25 +28,44 @@ from schody import Agent
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
 
-#if something:
-#    do with something
-
 class Queue(Queue):
-    def set_position(self,positions):
-        pass
-    def give_index(self, agent_id):
-        return self.queue.index(agent_id)
-    def pop(self):
-        data=self.queue.pop(0)
-        self.queue.append(None)
-    def check_if_in_que(self, agent_id):
+    def set_position(self,positions):# {{{
+        pass# }}}
+    def give_index(self, agent_id):# {{{
+        return self.queue.index(agent_id)# }}}
+    def check_if_in_que(self, agent_id):# {{{
         if agent_id in self.queue:
-            return 1
+            return True
         else:
-            return 0
+            return False# }}}
+    def pop(self):# {{{
+        self.equal_opportunities()
+        data = self.queue.pop(0)
+        self.queue.append(None)
+        if data is not None:
+            #print(data)
+            return True# }}}
+    def pop_none(self):# {{{
+        self.equal_opportunities()
+        if self.queue[0] is None:
+            self.queue.pop(0)
+            self.queue.append(None)# }}}
+    def only_pop(self):# {{{
+        self.equal_opportunities()
+        data = self.queue.pop(0)
+        #print(data, "*")
+        if data is not None:
+            return True
+        else:
+            return False# }}}
+    def equal_opportunities(self):# {{{
+        self.chance = dict.fromkeys(self.chance, False)# }}}
+    def give_position(self):# {{{
+        return [(x,i) for x,i in enumerate(self.queue) if i is not None]# }}}
+
 
 class Prepare_Queues:
-    def __init__(self, floors=3, number_queues=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
+    def __init__(self, floors=3, number_queues=2, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
         self.floors = floors
         self.number_queues = number_queues
         self.width = width
@@ -87,22 +105,36 @@ class Prepare_Queues:
     def add_to_queues(self, floor, data):# {{{
         for i in self.ques:
             if i.add(floor, data):
-                break# }}}
+                return True
+                # }}}
     def move(self):# {{{
+        agent_dropped = 0
         for i in self.ques:
-            i.go_on(self.positions)# }}}
+            if agent_dropped == 0:
+                if not i.moved:
+                    if i.pop():
+                        agent_dropped = 1
+                else:
+                    i.moved = False
+                    if i.only_pop():
+                        agent_dropped = 1
+            else:
+                if not i.moved:
+                    i.pop_none()
+                else:
+                    if not i.only_pop():
+                        i.moved = False# }}}
     def listed_ques(self):# {{{
         for i in self.ques:
-            pass
-            #i.give_location()
+            print(i.give_position())
             #print(i.queue)            
             #print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
-    def check_if_in(self, agent_id):
+    def check_if_in(self, agent_id):# {{{
         for i in self.ques:
             if i.check_if_in_que(agent_id):
                 return self.positions[i.give_index(agent_id)]
             else:
-                return 0
+                return False# }}}
 
 class EvacEnv:
     def __init__(self):# {{{
@@ -112,11 +144,13 @@ class EvacEnv:
 
         self.evacuee_radius=self.json.read("{}/inc.json".format(os.environ['AAMKS_PATH']))['evacueeRadius']
         time=1
+        #self.sim rvo2.PyRVOSimulator TIME_STEP , NEIGHBOR_DISTANCE , MAX_NEIGHBOR , TIME_HORIZON , TIME_HORIZON_OBSTACLE , RADIUS , MAX_SPEED
         self.sim = rvo2.PyRVOSimulator(time     , 40                , 5            , time         , time                  , self.evacuee_radius , 30)
         self._anim={"simulation_id": 1, "simulation_time": 20, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
         self._create_agents()
         self._load_obstacles()
         Vis({'highlight_geom': None, 'anim': '1/f1.zip', 'title': 'x', 'srv': 1})
+        self.waitings = {}
 
 # }}}
     def _create_agents(self):# {{{
@@ -131,7 +165,10 @@ class EvacEnv:
             self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
             self.agents[aa]['origin']=(i['x0'],i['y0'])
-            self.agents[aa]['target']=(1000, i['y0'])
+            if int(aa[1:])<76:
+                self.agents[aa]['target']=(1000, i['y0'])
+            else:
+                self.agents[aa]['target']=(2292, i['y0'])
         self._positions()
 # }}}
     def _load_obstacles(self):# {{{
@@ -149,16 +186,22 @@ class EvacEnv:
         dx=a['target'][0] - self.sim.getAgentPosition(a['id'])[0]
         dy=a['target'][1] - self.sim.getAgentPosition(a['id'])[1]
         self.sim.setAgentPrefVelocity(a['id'], (dx,dy))
-        if dx < 40:
+        if abs(dx) < 60:
             if self.sim.getAgentPosition(a['id'])[1] < 705:
                 floor = 2
             elif self.sim.getAgentPosition(a['id'])[1] > 705 and self.sim.getAgentPosition(a['id'])[1] < 1850:
                 floor = 1
             else:
                 floor = 0
-            self.Que.add_to_queues(floor, a['id'])
-            a['target']=(2750, 2955)
-            self.sim.setAgentPosition(a['id'], (0,0))
+            try:
+                if (a['name'], a['id']) not in self.waitings[floor]:
+                    self.waitings[floor].append((a['name'],a['id']))
+            except:
+                self.waitings.setdefault(floor, []).append((a['name'],a['id']))
+                
+            #if self.Que.add_to_queues(floor, a['id']):
+            #    a['target']=(1750, 2955)
+            #    self.sim.setAgentPosition(a['id'], (0,0))
         return sqrt(dx**2 + dy**2)
         
 # }}}
@@ -189,15 +232,38 @@ class EvacEnv:
         zf.writestr("anim.json", json.dumps(self._anim))
         zf.close()
 # }}}
+    def _add_to_staircase(self):# {{{
+        try:
+            for floor in self.waitings.keys():
+                agentname, agentid = self.waitings[floor][0]
+                if self.Que.add_to_queues(floor, agentid):
+                    self.agents[agentname]['target']=(1750, 2955)
+                    self.sim.setAgentPosition(agentid, (0,0))
+                    del self.waitings[floor][0]
+        except:
+            pass# }}}
     def _run(self):# {{{
-        for t in range(20):
+        for t in range(90):
             self.sim.doStep()
             self._update()
             #print([x for x in self.que.que() if x is not None])
+            #self.Que.listed_ques()
+            #print()
             self.Que.move()
-            self.Que.listed_ques()
+            #self.Que.listed_ques()
+            self._add_to_staircase()
 # }}}
 
 e=EvacEnv()
 e._run()
 e._write_zip()
+# dwie kolejki jedno wyjście
+# wchodzenie z dwóch stron
+# prędkość od gęstośći, zmierzyć w ilu krokach wychodzi
+# z 3 piętra wyjście na 2 piętro
+# wchodzenie pod górę
+# część wspólna z poprzedniej kolejki, prędkość 0, reszta jeden krok
+# ile osób chce dojść
+
+# czy po insercie pauza całej kolejki czy danych pięter? 
+# jeżeli z wcześniejszej kolejki został wypuszczony, co z insertem w tej kolejce?
