@@ -33,6 +33,7 @@ from include import SimIterations
 from include import Vis
 
 from scipy.stats.distributions import lognorm
+from sklearn.cluster import MeanShift
 
 
 # }}}
@@ -56,7 +57,11 @@ class EvacMcarlo():
             self._static_evac_conf()
             self._dispatch_evacuees()
             self._make_evac_conf()
+            # method clustring
+            # save json
+                # enter makeevaconf
         self._evacuees_static_animator()
+
 
 # }}}
     def _static_evac_conf(self):# {{{
@@ -118,7 +123,7 @@ class EvacMcarlo():
     def _evac_rooms(self,floor): # {{{
         '''
         * probabilistic: probabilistic rooms
-        * manual: manually asigned evacuees 
+        * manual: manually asigned evacuees
         '''
 
         rooms={}
@@ -145,25 +150,44 @@ class EvacMcarlo():
         We dispatch the evacuees across the building according to the density
         distribution. 
         '''
-
-        self.dispatched_evacuees=OrderedDict() 
+        self.dispatched_evacuees=OrderedDict()
+        self.groups = OrderedDict()
+        self.leaders = OrderedDict()
+        self.e_type = OrderedDict()
         self.pre_evacuation=OrderedDict() 
         self._make_floor_obstacles()
         for floor in self.floors:
             self.pre_evacuation[floor] = list()
+            self.groups[floor] = list()
+            self.leaders[floor] = list()
+            self.e_type[floor] = list()
             positions = []
             evac_rooms=self._evac_rooms(floor)
             for name,r in evac_rooms['probabilistic'].items():
+
                 density=self._get_density(r['name'],r['type_sec'],floor)
                 room_positions=self._dispatch_inside_polygons(density,r['points'], floor, name)
                 positions += room_positions
+
                 for i in room_positions:
                     self.pre_evacuation[floor].append(self._make_pre_evacuation(r['name'], r['type_sec']))
+
             for name,r in evac_rooms['manual'].items():
+                pos_to_cluster = []
+                for i in r['positions']:
+                    pos_to_cluster.append(i[0:2])  #cutting list to have only necessery elements
+                groups, leaders, e_type=  self.clustering(pos_to_cluster)  # parameters from clustering method
+                self.groups[floor].extend(list(groups))
+                self.leaders[floor].extend(list(leaders))
+                self.e_type[floor].extend(list(e_type))
+
                 positions += r['positions']
                 for i in r['positions']:
                     self.pre_evacuation[floor].append(self._make_pre_evacuation(name, r['type_sec']))
             self.dispatched_evacuees[floor] = positions
+
+
+
 # }}}
     def _make_floor_obstacles(self):# {{{
         self._floor_obstacles={}
@@ -193,6 +217,7 @@ class EvacMcarlo():
         return positions
 # }}}
     def _make_evac_conf(self):# {{{
+
         ''' Write data to sim_id/evac.json. '''
         self._evac_conf['FLOORS_DATA']=OrderedDict()
         for floor in self.floors:
@@ -206,12 +231,22 @@ class EvacMcarlo():
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['ORIGIN']         = (pos[0], pos[1])
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['COMPA']          = (pos[2])
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['PRE_EVACUATION'] = self.pre_evacuation[floor][i]
+                self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['PRE_EVACUATION'] = self.pre_evacuation[floor][i]
 
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['ALPHA_V']        = round(normal(self.conf['evacuees_alpha_v']['mean']     , self.conf['evacuees_alpha_v']['sd'])     , 2)
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['BETA_V']         = round(normal(self.conf['evacuees_beta_v']['mean']      , self.conf['evacuees_beta_v']['sd'])      , 2)
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['H_SPEED']        = round(normal(self.conf['evacuees_max_h_speed']['mean'] , self.conf['evacuees_max_h_speed']['sd']) , 2)
                 self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['V_SPEED']        = round(normal(self.conf['evacuees_max_v_speed']['mean'] , self.conf['evacuees_max_v_speed']['sd']) , 2)
+                self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['CLUSTER'] = int(self.groups[floor][i])
+                self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['LEADER'] = int(self.leaders[floor][i])
+                self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['ETYPE'] = self.e_type[floor][i]
+
+
+
+                #self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['ETYPE'] = self.groups[floor][i]
         self.json.write(self._evac_conf, "{}/workers/{}/evac.json".format(os.environ['AAMKS_PROJECT'],self._sim_id))
+        print(self._sim_id)
+
 # }}}
     def _evacuees_static_animator(self):# {{{
         ''' 
@@ -225,5 +260,37 @@ class EvacMcarlo():
         for floor in self.floors:
             m[floor]=self.dispatched_evacuees[floor]
         self.s.query('INSERT INTO dispatched_evacuees VALUES (?)', (json.dumps(m),))
-        
+
+    def cluster_leader(self, center, points):# {{{
+        leaders = []
+        points = tuple(map(tuple, points))
+        for num,i  in  enumerate(center):
+            dist_2 = np.sum((points - i) ** 2, axis=1)
+            leaders.append(np.argmin(dist_2))
+
+        return leaders
+
+
+    def clustering(self, positions):
+        """clustering evacuues in the room, finding leaders in groups by cluster_leader method
+            which tells who to follow, naming agent is it follower or active"""
+        ms = MeanShift()
+        z = np.array(positions)
+        ms.fit(z)
+        cluster_centers = ms.cluster_centers_
+        labels = ms.labels_
+        leaders = self.cluster_leader(cluster_centers, list(positions)) #list of leaders
+
+        who_to_follow= []
+        e_type= []
+        for num, i in enumerate(labels):
+            who_to_follow.append(leaders[i])
+            if num == leaders[i]:
+                e_type.append("ACTIVE")
+            else:
+                e_type.append("FOLLOWER")
+
+        return labels, who_to_follow, e_type
+
+
 # }}}

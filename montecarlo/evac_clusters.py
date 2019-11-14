@@ -104,6 +104,7 @@ class EvacClusters():
                 cluster_centers = ms.cluster_centers_
                 labels = ms.labels_
 
+
                 for i in sorted(labels):
                     self.clusters[floor][room][i]=OrderedDict([('agents', [])])
                 for idx,i in enumerate(labels):

@@ -31,6 +31,7 @@
 		"color_7": { "legendary": 0 , "x": "color_7"         , "t": "color_7"         , "c": "#ffffff" , "stroke": "none"    , "lightc": "#333333" , "font": "#444444" , "animOpacity":  1  , "strokeWidth": 0 }   ,
 		"color_8": { "legendary": 0 , "x": "color_8"         , "t": "color_8"         , "c": "#ffff00" , "stroke": "none"    , "lightc": "#333333" , "font": "#444444" , "animOpacity":  1  , "strokeWidth": 0 }   ,
 		"color_9": { "legendary": 0 , "x": "color_9"         , "t": "color_9"         , "c": "#333333" , "stroke": "none"    , "lightc": "#333333" , "font": "#444444" , "animOpacity":  1  , "strokeWidth": 0 }   ,
+		"color_10": { "legendary": 0 , "x": "color_10"       , "t": "color_10"        , "c": "#ff22aa" , "stroke": "none"    , "lightc": "#333333" , "font": "#444444" , "animOpacity":  1  , "strokeWidth": 0 }   ,
 
 		"fg":      { "legendary": 0 , "x": "fg"              , "t": "fg"              , "c": "#ffffff" , "stroke": "#ffffff" , "lightc": "#222222" , "font": "#444444" , "animOpacity":  1  , "strokeWidth": 0 }
 	}                               ,

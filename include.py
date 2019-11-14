@@ -209,7 +209,7 @@ class Json: # {{{
         except:
             raise SystemExit("include.py: Missing or invalid json: {}.".format(path)) 
 
-    def write(self, data, path, pretty=0): 
+    def write(self, data, path, pretty=0):
         try:
             if pretty==1:
                 pretty=json.dumps(data, indent=4)
@@ -218,8 +218,8 @@ class Json: # {{{
             else:
                 with open(path, "w") as f: 
                     json.dump(data, f)
-        except:
-            raise SystemExit("include.py: Cannot write json: {}.".format(path)) 
+        except Exception as e:
+            raise SystemExit("include.py: Cannot write json: {}, {}.".format(path, e))
 
 
 # }}}
@@ -291,7 +291,7 @@ class Vis:# {{{
             * previous server visuals are obsolete and need to be removed
             * initial Apainter's evacuees will be displayed
         skip_evacuees: optional; good for cfast_partition.py calls before evacuees are ready
-        skip_fire_origin: optional; good for cfast_partition.py calls before fire_origin is ready
+        : optional; good for cfast_partition.py calls before fire_origin is ready
         '''
 
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
