@@ -38,7 +38,7 @@ class Queue:
                     self.queue[floor*self.floor_space] = data
                     return True
                 else:
-                    return False
+                    return False, "0"
         else:
             if not random.randint(0,3):
                 if not self.moved:
@@ -47,7 +47,7 @@ class Queue:
                     self.queue.insert(floor*self.floor_space, data)
                     return True
                 else:
-                    return False
+                    return False, "0"
 
     def insert(self, floor, data):
         deleted = False

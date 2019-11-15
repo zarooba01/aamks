@@ -24,6 +24,7 @@ from numpy.random import uniform
 # }}}
 
 from schody import Queue 
+#from staircase import Queue, Staircase
 from schody import Agent
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
@@ -58,9 +59,10 @@ class Queue(Queue):
 
 
 class Prepare_Queues:
-    def __init__(self, floors=3, number_queues=2, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
+    def __init__(self, floors=3, number_queues=2, doors=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
         self.floors = floors
         self.number_queues = number_queues
+        self.doors = doors
         self.width = width
         self.height = height
         self.offsetx = offsetx
@@ -104,6 +106,9 @@ class Prepare_Queues:
                 # }}}
     def move(self):# {{{
         agent_dropped = 0
+
+
+#doors 
         for i in self.ques:
             if agent_dropped == 0:
                 if not i.moved:
@@ -140,6 +145,7 @@ class Prepare_Queues:
 class EvacEnv:
     def __init__(self):# {{{
         self.Que = Prepare_Queues()
+        #self.Que = Staircase()
         self.json=Json()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
 
@@ -269,3 +275,10 @@ e._write_zip()
 
 # czy po insercie pauza całej kolejki czy danych pięter? 
 # jeżeli z wcześniejszej kolejki został wypuszczony, co z insertem w tej kolejce?
+# tempo, jak dłuższą animację
+# kolejność od parteru
+# init nazwa klatki, żeby geometrię pobrać
+#time step = co ile sekund ma wykonać krok
+# jeżeli wcześniejsza zajęta może do drugiej wejść
+# st1 kolejka, add zwraca true albo false
+
