@@ -26,42 +26,31 @@ class Queue:
         if above cell is taken, there is lottery between
         appended and resident - 33%
         if the space at the floor and above cell is taken, 
-        data is insert into queue 
+        data is insert into queue in cause of winning the lottery
         '''
 
         if self.queue[floor*self.floor_space] is None:
             if self.queue[floor*self.floor_space+1] is None:
                 self.queue[floor*self.floor_space] = data
-                return True
+                return 1
             else:
                 if not random.randint(0,3):
                     self.queue[floor*self.floor_space] = data
-                    return True
+                    return 1
                 else:
-                    return False, "0"
+                    return 0
         else:
             if not random.randint(0,3):
                 if not self.moved:
-                    self.moved = True
-                    #self.insert(floor, data)
-                    self.queue.insert(floor*self.floor_space, data)
-                    return True
+                    return 2
                 else:
-                    return False, "0"
+                    return 0
+            else:
+                return 0
 
     def insert(self, floor, data):
-        deleted = False
-        if not self.moved:
-            self.queue.insert(floor*self.floor_space+1, data)
-            #for i in range(floor*self.floor_space, len(self.queue)):
-            for i in range(0, floor*self.floor_space):
-                if self.queue[i] is None:
-                    del self.queue[i]
-                    deleted = True
-                    break
-            if not deleted:
-                self.queue.pop(0)
-                self.moved = True
+        self.moved = True
+        self.queue.insert(floor*self.floor_space, data)
 
     def pop(self):
         self.moved = False

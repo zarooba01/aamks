@@ -24,7 +24,6 @@ from numpy.random import uniform
 # }}}
 
 from schody import Queue 
-#from staircase import Queue, Staircase
 from schody import Agent
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
@@ -59,10 +58,12 @@ class Queue(Queue):
 
 
 class Prepare_Queues:
-    def __init__(self, floors=3, number_queues=2, doors=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
+    def __init__(self, name="Str1", floors=3, number_queues=2, doors=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
+        self.name = name
         self.floors = floors
         self.number_queues = number_queues
         self.doors = doors
+        self.insert = 0
         self.width = width
         self.height = height
         self.offsetx = offsetx
@@ -99,31 +100,43 @@ class Prepare_Queues:
         return positions# }}}
     def add_to_queues(self, floor, data):# {{{
         for i in self.ques:
-            if i.add(floor, data):
+            output = i.add(floor, data)
+            if output == 1:
                 return True
-            #else:
-            #    return False
+            elif output == 2:
+                if self.insert < self.doors:
+                    self.insert += 1
+                    i.insert(floor, data)
+                    return True
+        return False
                 # }}}
     def move(self):# {{{
+        self.insert = 0
         agent_dropped = 0
-
-
-#doors 
-        for i in self.ques:
-            if agent_dropped == 0:
-                if not i.moved:
-                    if i.pop():
-                        agent_dropped = 1
+        #awaitings = [(que.queue[0], que.moved, que) for que in sorted(self.ques, key=lambda x: x.moved, reverse=True)]
+        #for agent, moved, que in awaitings:
+        #    if moved:
+        #        que.moved = False
+        #        if que.only_pop():
+        #            agent_dropped += 1
+        #    else:
+        #        if agent_dropped < self.doors:
+        #            if que.pop():
+        #                agent_dropped += 1
+        #        else:
+        #            que.pop_none()
+        for que in sorted(self.ques, key=lambda x: x.moved, reverse=True):
+            if que.moved:
+                que.moved = False
+                if que.only_pop():
+                    agent_dropped += 1
+            else: 
+                if agent_dropped < self.doors:
+                    if que.pop():
+                        agent_dropped += 1
                 else:
-                    i.moved = False
-                    if i.only_pop():
-                        agent_dropped = 1
-            else:
-                if not i.moved:
-                    i.pop_none()
-                else:
-                    if not i.only_pop():
-                        i.moved = False# }}}
+                    que.pop_none()# }}}
+
     def listed_ques(self):# {{{
         for i in self.ques:
             print(i.give_position())
@@ -145,7 +158,6 @@ class Prepare_Queues:
 class EvacEnv:
     def __init__(self):# {{{
         self.Que = Prepare_Queues()
-        #self.Que = Staircase()
         self.json=Json()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
 
@@ -241,7 +253,7 @@ class EvacEnv:
 # }}}
     def _add_to_staircase(self):# {{{
         try:
-            for floor in self.waitings.keys():
+            for floor in sorted(self.waitings.keys()):
                 #print(floor, len(self.waitings[floor]))
 #liczba oczekujących na danym piętrze
                 agentname, agentid = self.waitings[floor][0]
@@ -258,11 +270,9 @@ class EvacEnv:
             self.sim.doStep()
             self._update()
             #print([x for x in self.que.que() if x is not None])
-            #self.Que.listed_ques()
-            #print()
+            self._add_to_staircase()
             self.Que.move()
             #self.Que.listed_ques()
-            self._add_to_staircase()
 # }}}
 
 e=EvacEnv()
@@ -272,13 +282,3 @@ e._write_zip()
 # z 3 piętra wyjście na 2 piętro
 # wchodzenie pod górę
 # część wspólna z poprzedniej kolejki, prędkość 0, reszta jeden krok
-
-# czy po insercie pauza całej kolejki czy danych pięter? 
-# jeżeli z wcześniejszej kolejki został wypuszczony, co z insertem w tej kolejce?
-# tempo, jak dłuższą animację
-# kolejność od parteru
-# init nazwa klatki, żeby geometrię pobrać
-#time step = co ile sekund ma wykonać krok
-# jeżeli wcześniejsza zajęta może do drugiej wejść
-# st1 kolejka, add zwraca true albo false
-
