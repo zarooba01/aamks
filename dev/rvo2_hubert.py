@@ -21,12 +21,20 @@ from include import Json
 from include import Dump as dd
 from include import Vis
 from numpy.random import uniform
+from include import SimIterations
 # }}}
 
 class EvacEnv:
     def __init__(self):# {{{
         self.json=Json()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
+
+
+        self.conf = self.json.read("{}/conf.json".format(os.environ['AAMKS_PROJECT']))
+        si=SimIterations(self.conf['project_id'], self.conf['scenario_id'], self.conf['number_of_simulations'])
+        sim_id = range(*si.get())
+        self.simulation_id = (list(range(*si.get())))
+        self.path = self.json.read("{}/workers/{}/evac.json".format(os.environ['AAMKS_PROJECT'], *self.simulation_id))
 
         self.evacuee_radius=self.json.read("{}/inc.json".format(os.environ['AAMKS_PATH']))['evacueeRadius']
         time=1
@@ -41,9 +49,15 @@ class EvacEnv:
 # }}}
     def _create_agents(self):# {{{
         z =self.s.query("SELECT * FROM aamks_geom WHERE type_pri='EVACUEE'" )
-        y = self.s.query("SELECT * FROM clustering_info")
+        #y = self.s.query("SELECT * FROM clustering_info")
+
+        data = self.path
+        id=0
+        for floor in data["FLOORS_DATA"]:
+            agenty = data["FLOORS_DATA"][floor]["EVACUEES"]
         self.agents={}
-        for i,j in zip(z, y):
+        for i,j in zip(z,agenty):
+
             aa=i['name']
             self.agents[aa]={}
             ii=self.sim.addAgent((i['x0'],i['y0']))
@@ -51,8 +65,11 @@ class EvacEnv:
             self.agents[aa]['id']=ii
             self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
-            self.agents[aa]['origin']=(j['pos_x'],j['pos_y'])
-            self.agents[aa]['target']=(j['lead_x'],j['lead_y'])   #leader's center needed
+            self.agents[aa]['origin'] = (i['x0'], i['y0'])
+            self.agents[aa]['target'] = (0,0)
+            self.agents[aa]['etype'] = agenty[j]["ETYPE"]
+            self.agents[aa]['who_to_follow_id'] = agenty[j]["LEADER"]
+
             #self.agents[aa]['target']=(i['x0'] + 1000, i['y0']+100)
         self._positions()
 
@@ -69,21 +86,41 @@ class EvacEnv:
         radius=3.5 is the condition for the agent to reach the behind-doors target 
         '''
 
-        dx=a['target'][0] - self.sim.getAgentPosition(a['id'])[0]
-        dy=a['target'][1] - self.sim.getAgentPosition(a['id'])[1]
+        if a['etype']== 'ACTIVE':
+            dx= 12000 - self.sim.getAgentPosition(a['id'])[0]
+            dy= 12000 - self.sim.getAgentPosition(a['id'])[1]
+
+            #print("AKTYWNY", "id: ", a['id'],"pozycja: ", self.sim.getAgentPosition(a['id']), "cel: ", a['target'], "vect: ", self.sim.getAgentPrefVelocity(a['id']) )
+
+            print("id=%d, pozycja = %f %f" %(a['id'], self.sim.getAgentPosition(a['id'])[0],self.sim.getAgentPosition(a['id'])[1]) )
+        if a['etype'] == 'FOLLOWER':
+            follow = a['who_to_follow_id']
+
+            #print("FOLLOWER", "id:", a['id'], "pozycja: ", self.sim.getAgentPosition(a['id']), "cel: ",follow, self.sim.getAgentPosition(follow), "vect: ", (self.sim.getAgentPrefVelocity(a['id'])))
+
+            print("id=%d, pozycja= (%f %f) cel_id = %d cel_pozycja = (%f %f)" %(a['id'], self.sim.getAgentPosition(a['id'])[0],self.sim.getAgentPosition(a['id'])[1], follow, self.sim.getAgentPosition(follow)[0], self.sim.getAgentPosition(follow)[1]))
+            dx = self.sim.getAgentPosition(follow)[0]- self.sim.getAgentPosition(a['id'])[0]
+            dy = self.sim.getAgentPosition(follow)[1]-self.sim.getAgentPosition(a['id'])[1]
+
+            #print(dx,dy)
         self.sim.setAgentPrefVelocity(a['id'], (dx,dy))
+        print(dx,dy,self.sim.getAgentPrefVelocity(a['id']))
         return sqrt(dx**2 + dy**2)
         
 # }}}
     def _positions(self):# {{{
         frame=[]
         for k,v in self.agents.items():
+
             pos=[round(i) for i in self.sim.getAgentPosition(v['id'])]
+
             frame.append([pos[0],pos[1],0,0,"N",1])
         self._anim["animations"]["evacuees"].append({"0": frame})
+
 # }}}
     def _update(self):# {{{
         for k,v in self.agents.items():
+            #print(self.agents[k])
             target_dist=self._velocity(self.agents[k])
             if target_dist <= self.evacuee_radius * 3.5:
                 # dd(self.agents[k]['id'], target_dist)
