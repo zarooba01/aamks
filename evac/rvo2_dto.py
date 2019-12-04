@@ -8,10 +8,14 @@ from math import ceil
 import logging
 import os
 import json
-from nav import Navmesh
+from geom.nav import Navmesh
 from shapely.geometry import LineString
 from include import Sqlite
 from math import log
+import os
+from scipy.stats import norm
+from math import log
+from numpy import array, prod
 
 
 class EvacEnv:
@@ -25,6 +29,7 @@ class EvacEnv:
         self.velocity_vector = []
         self.speed_vec = []
         self.fed = []
+        self.fed_nummeric = []
         self.fed_vec = []
         self.finished = []
         self.finished_vec = []
@@ -62,7 +67,7 @@ class EvacEnv:
             if door['floor'] != str(self.floor):
                 continue
             x, y = door['center_x'], door['center_y']
-            path = self.nav.query([self.evacuees.get_position_of_pedestrian(evacuee), (x, y)], maxStraightPath=200)
+            path = self.nav.nav_query(src=self.evacuees.get_position_of_pedestrian(evacuee), dst=(x, y), maxStraightPath=200)
             if path[0] == 'err':
                 continue
             if self._next_room_in_smoke(evacuee, path) is not True:
@@ -80,6 +85,7 @@ class EvacEnv:
             exits = list(zip(*paths_free_of_smoke))[-1]
             return paths_free_of_smoke[exits.index(min(exits))][0], paths_free_of_smoke[exits.index(min(exits))][1]
         else:
+            #print(evacuee, self.evacuees.get_position_of_pedestrian(evacuee))
             exits = list(zip(*paths))[0]
             return paths[exits.index(min(exits))][0], paths[exits.index(min(exits))][1]
 
@@ -94,7 +100,7 @@ class EvacEnv:
         self.room = od_at_agent_position[1]
 
         if self.config['SMOKE_AWARENESS'] and len(path) > 1:
-            od_next_room = self.smoke_query.get_visibility(path[1], self.current_time, self.floor)
+            od_next_room = self.smoke_query.get_visibility(path[1])
             if od_at_agent_position[0] < od_next_room[0]:
                 return True
             else:
@@ -158,7 +164,7 @@ class EvacEnv:
                 continue
             else:
                 position = self.evacuees.get_position_of_pedestrian(e)
-                goal = self.nav.query([position, self._find_closest_exit(e)], maxStraightPath=32)
+                goal = self.nav.nav_query(src=position, dst=self._find_closest_exit(e), maxStraightPath=32)
                 try:
                     vis = self.sim.queryVisibility(position, goal[2], 15)
                     if vis:
@@ -188,13 +194,16 @@ class EvacEnv:
                 continue
             else:
                 try:
-                    fed = self.smoke_query.get_fed(self.evacuees.get_position_of_pedestrian(i), self.current_time,
-                                               self.floor)
+                    fed = self.smoke_query.get_fed(self.evacuees.get_position_of_pedestrian(i))
+                    if i == 0:
+                        self.elog.info('FED calculated: {}'.format(fed))
                 except:
+                    self.elog.warning('Simulation without FED')
                     fed = 0.0
                 self.evacuees.update_fed_of_pedestrian(i, fed * self.config['SMOKE_QUERY_RESOLUTION'])
 
         fed = [self.evacuees.get_fed_of_pedestrian(i) for i in range(self.sim.getNumAgents())]
+        self.fed_nummeric = fed
         c = None
         fed_symbilic = []
         for i in fed:
@@ -223,7 +232,7 @@ class EvacEnv:
         self.nav.build(floor=str(self.floor))
 
     def prepare_rooms_list(self):
-        self.s = Sqlite("aamks.sqlite")
+        self.s = Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
         rooms_f = self.s.query('SELECT name from aamks_geom where type_pri="COMPA" and floor = "{}"'.format(self.floor))
         for item in rooms_f:
             self.room_list.update({item['name']: 0.0})
@@ -259,10 +268,6 @@ class EvacEnv:
             else:
                 return (30-vis)/30
 
-
-    def do_step(self):
-        self.sim.doStep()
-
     def get_number_of_evacuees(self):
         return self.sim.getNumAgents()
 
@@ -279,6 +284,13 @@ class EvacEnv:
         if all(x == 0 for x in self.finished) and self.rset == 0:
             self.rset = self.current_time + 30
 
+    def calculate_individual_risk(self):
+        p = list()
+        for i in self.fed_nummeric:
+            p.append(1 - norm.cdf(log(i)))
+        return 1 - prod(array(p))
+
+
     def do_simulation(self, step):
         if (step % self.config['SMOKE_QUERY_RESOLUTION']) == 0:
             self.set_goal()
@@ -287,7 +299,7 @@ class EvacEnv:
         self.sim.doStep()
         self.update_agents_position()
         self.update_time()
-        self.elog.info(self.current_time)
+        #self.elog.info(self.current_time)
         if (step % self.config['SMOKE_QUERY_RESOLUTION']) == 0:
             self.update_fed()
         if self.rset == 0:

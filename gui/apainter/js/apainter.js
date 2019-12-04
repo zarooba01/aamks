@@ -1,5 +1,7 @@
 // globals//{{{
-var win=[screen.width-30,screen.height-190];
+// cd /usr/local/aamks/gui/apainter/js/; git log -p apainter.js | v
+//
+var win=[ $(window).width()-30, $(window).height()-50];
 var db=TAFFY(); // http://taffydb.com/working_with_data.html
 var zt={'x':0, 'y':0, 'k':1}; // zoom transform
 var cg={}; // current geom, the one that is currently selected, created, removed, etc.
@@ -7,12 +9,11 @@ var cgID;
 var gg;
 var ggx;
 var zoom;
-var fire_model='CFAST';
 var currentView='2d';
 var activeLetter='r';
 var svg;
 var floor=0;
-var floorsCount=0;
+var floorsCount=1;
 var floorZ0=0;
 var building;
 var buildingLabels;
@@ -23,13 +24,19 @@ var defaults={'door_dimz': 200, 'door_width': 90, 'floor_dimz': 350, 'window_dim
 var activeSnap={};
 var undoBuffer=[];
 var evacueeRadius;
+var threejsPlay=1;
 //}}}
 function debug() {//{{{
 	console.clear();
+
+	dd(undoBuffer);
+	//dd($("#ufloor"+floor)[0]);
+	//dd($('#apainter-svg')[0]); 
+	//dd($('#uimg0')[0]); 
 	//ddd();
 	//return;
 	//dd($('#building')[0]);
-	dd($('#floor0')[0]);
+	//dd($('#floor0')[0]);
 	//dd(db2cadjson());
 	//dd($('#floor0')[0]);
 	//dd("f2", $('#ufloor2')[0]);
@@ -64,7 +71,6 @@ $(function()  {
 //}}}
 function registerListeners() {//{{{
 	$("right-menu-box").on("click"     , "#btn_copy_to_floor"      , function() { floorCopy() });
-	$("right-menu-box").on("click"     , '#setup_underlay'         , function() { underlay_form(); });
 	$("right-menu-box").on("mouseover" , ".bulkProps"              , function() { cgSelect($(this).attr('id')                                                                    , 1 , 0); });
 	$("right-menu-box").on("click"     , '.bulkProps'              , function() { cgSelect($(this).attr('id'));  });
 	$("body").on("click"               , '#apainter-save'          , function() { if($("#cad-json-textarea").val()===undefined) { db2cadjson(); } else { saveTxtCadJson(); } });
@@ -76,6 +82,8 @@ function registerListeners() {//{{{
 	$("body").on("change"              , '#alter-exit-type'        , function() { saveRightBox(); });
 	$("body").on("change"              , '#alter-mvent-throughput' , function() { saveRightBox(); });
 	$("body").on("keyup"               , '#alter-polypoints'       , function() { saveRightBox(); });
+	$("body").on("keydown"             , '#alter-geom-letter'      , function() { saveRightBox(); });
+	$("body").on("keyup"               , '#alter-z'                , function() { saveRightBox(); });
 	$("body").on("keyup"               , '#alter-px'               , function() { saveRightBox(); });
 	$("body").on("keyup"               , '#alter-py'               , function() { saveRightBox(); });
 	$("body").on("mouseleave"          , 'right-menu-box'          , function() { saveRightBox(); showCgPropsBox(); });
@@ -93,23 +101,21 @@ function registerListeners() {//{{{
 
 }
 //}}}
-function keyboardEvents() {//{{{
-
-	$(this).keypress((e) => { if (e.key in gg && ! e.ctrlKey)    { cgEscapeCreate(); activeLetter=e.key; cgStartDrawing(); } });
-	$(this).keydown((e) =>  { if (e.key == 'Escape')             { escapeAll(); } });
-	$(this).keydown((e) =>  { if (e.key == 'h')                  { cgEscapeCreate(); nextView(); } });
-	$(this).keydown((e) =>  { if (e.key == 'p')                  { $("#p1").remove() ; } });
-	$(this).keydown((e) =>  { if (e.key == 'n')                  { cgEscapeCreate(); changeFloor(calcNextFloor()); } });
-	$(this).keydown((e) =>  { if (e.key == '=')                  { cgEscapeCreate(); resetView(); } });
-	$(this).keydown((e) =>  { if (e.key == 'r' && e.ctrlKey)     { alert('Refreshing will clear unsaved Aamks data. Continue?') ; } }) ;
-	$(this).keydown((e) =>  { if (e.key == 's' && e.ctrlKey)     { cgEscapeCreate(); e.preventDefault(); db2cadjson(); importCadJson(); } }) ;
-	$(this).keyup((e) =>    { if (e.key == 'z' && e.ctrlKey)     { undoPop(); } }) ;
-	$(this).keyup((e) =>    { if (e.key == 'F1' && e.ctrlKey)    { startTxtView(); } }) ;
-	$(this).keypress((e) => { if (e.key == 'x' && ! isEmpty(cg)) { cgEscapeCreate(); cgRemove(); }});
-	
-	$(this).keypress((e) => { if (e.key == 'l')                  { cgEscapeCreate(); bulkProps(); } });
+function keyboardEvents()  { // {{{
+	$(this).keyup((e) =>   { if (e.target.nodeName != 'INPUT' && e.key in gg && ! e.ctrlKey )   { cgEscapeCreate(); activeLetter=e.key; cgStartDrawing(); } });
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 'v')                  { cgEscapeCreate(); nextView(); } });
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 'p')                  { $("#p1").remove() ; } });
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 'n')                  { cgEscapeCreate(); changeFloor(calcNextFloor()); start2dView(); } });
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == '=')                  { cgEscapeCreate(); resetView(); } });
+	$(this).keyup((e) =>   { if (e.target.nodeName != 'INPUT' && e.key == 'i' && e.ctrlKey)     { startTxtView(); } }) ;
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 'r' && e.ctrlKey)     { alert('Refreshing will clear unsaved Aamks data. Continue?') ; } }) ;
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 's' && e.ctrlKey)     { cgEscapeCreate(); e.preventDefault(); db2cadjson(); importCadJson(); } }) ;
+	$(this).keyup((e) =>   { if (e.target.nodeName != 'INPUT' && e.key == 'z' && e.ctrlKey)     { undoApply(); } }) ;
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 'x' && ! isEmpty(cg)) { cgEscapeCreate(); cgRemove(); }});
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == 'l')                  { cgEscapeCreate(); bulkProps(); } });
+	$(this).keydown((e) => { if (e.key == 'Escape')												{ escapeAll(); } });
 	// debug
-	$(this).keypress((e) => { if (e.key == ']') { debug(); }});
+	$(this).keydown((e) => { if (e.target.nodeName != 'INPUT' && e.key == ']') { debug(); }});
 }
 //}}}
 function dddx() {//{{{
@@ -136,6 +142,7 @@ function escapeAll(rmbClose=1) {//{{{
 	$("#buildingLabels").html(""); 
 	$("#apainter-texts-pos").html(''); 
 	if(rmbClose==1) { $("right-menu-box").css("display", "none"); }
+	underlayPointerEvents(stopDragging=1);
 }
 //}}}
 function getBbox() {//{{{
@@ -173,7 +180,7 @@ function cgCss() {//{{{
 	if(cg.exit_type=='secondary') { $("#"+cg.name).addClass('exit_type_secondary');}
 }
 //}}}
-function cgDb() { //{{{
+function cgDb(undoRegister=1) { //{{{
 	if(cg.type=='underlay_scaler') { return; }
 	var lines=[];
 
@@ -184,32 +191,26 @@ function cgDb() { //{{{
 	} else {
 		lines.push([-100000, -100000], [-100000, -100000], [-100000, -100000], [-100000, -100000]);
 	}
-	undoPush(deepcopy(cg));
 	db({"name": cg.name}).remove();
 	b=getBbox();
-	db.insert({"name": cg.name, "idx": cg.idx, "cad_json": cg.cad_json, "letter": cg.letter, "type": cg.type, "lines": lines, "polypoints": cg.polypoints, "z": cg.z, "floor": cg.floor, "mvent_throughput": cg.mvent_throughput, "exit_type": cg.exit_type, "room_enter": cg.room_enter, "minx": b.min.x, "miny": b.min.y, "maxx": b.max.x, "maxy": b.max.y });
+	db.insert({"name": cg.name, "idx": cg.idx, "cad_json": cg.cad_json, "letter": cg.letter, "type": cg.type, "lines": lines, "polypoints": cg.polypoints, "z": cg.z, "floor": cg.floor, "mvent_throughput": cg.mvent_throughput, "exit_type": cg.exit_type, "room_enter": cg.room_enter, "evacuees_density": cg.evacuees_density, "minx": b.min.x, "miny": b.min.y, "maxx": b.max.x, "maxy": b.max.y });
+	if(undoRegister==1) { undoBufferRegister('insert'); }
 }
 //}}}
-function undoPop() {//{{{
+function undoApply() {//{{{
+	escapeAll();
 	if (undoBuffer.length==0) { return; }
 	cg=undoBuffer.pop();
 	if(cg.op=='insert') { 
-		cgRemove();
+		cgRemove(undoRegister=0);
 	} else {
-		$("#"+cg.name).remove(); cgDb(); cgSvg(); cgCss(); updateSnapLines();
+		$("#"+cg.name).remove(); cgDb(undoRegister=0); cgSvg(); cgCss(); updateSnapLines();
 	}
-	undoBuffer.pop();
-	escapeAll();
 }
 //}}}
-function undoPush(mm) {//{{{
-	data=db({"name": mm.name}).get()[0]; // modify or remove
-	if(data==undefined) { // insert
-		data=mm;
-		data.op='insert';
-	} else {
-		data.op='modify';
-	}
+function undoBufferRegister(op) {//{{{
+	var data=deepcopy(db({"name": cg.name}).get()[0]);
+	data.op=op;
 	undoBuffer.push(data);
 }
 //}}}
@@ -264,6 +265,7 @@ function close2dView() {//{{{
 //}}}
 function close3dView() {//{{{
 	$("view3d").css("display", "none");
+	threejsPlay=0;
 }
 //}}}
 function closeTxtView() {//{{{
@@ -271,7 +273,6 @@ function closeTxtView() {//{{{
 }
 //}}}
 function start2dView() {//{{{
-	if(fire_model=='FDS') { return; }
 	currentView='2d'; 
 	close3dView();
 	$("view2d").css("display", "block");
@@ -279,11 +280,10 @@ function start2dView() {//{{{
 }
 //}}}
 function start3dView() {//{{{
-	if(fire_model=='FDS') { return; }
+	threejsPlay=1;
 	currentView='3d'; 
 	close2dView();
 	view3d();
-	$('#canvas3d').attr('width', win[0]).attr('height', win[1]);
 	$("view3d").css("display", "block");
 }
 //}}}
@@ -303,7 +303,6 @@ function startTxtView(pretty_json="") {//{{{
 
 function nextView() {//{{{
 	$("right-menu-box").css("display", "none");
-	if(fire_model=='FDS') { return; }
 	closeTxtView();
 
 	if(currentView=='2d')       { start3dView(); }
@@ -311,8 +310,8 @@ function nextView() {//{{{
 	else if(currentView=='txt') { start2dView(); }
 }
 //}}}
-function cgRemove() {//{{{
-	undoBuffer.push(cg);
+function cgRemove(undoRegister=1) {//{{{
+	if(undoRegister==1) { undoBufferRegister('remove'); }
 	$("#"+cg.name).remove();
 	db({"name":cg.name}).remove();
 	updateSnapLines();
@@ -322,6 +321,7 @@ function cgRemove() {//{{{
 		bulkProps(); 
 	}
 	showBuildingLabels();
+	$(".building-vertex").remove() 
 }
 //}}}
 
@@ -387,14 +387,14 @@ function guessFloorZ0() {//{{{
 	// Guess 1: Perhaps user has set the z-origin for this floor -- we will then find it in db()
 	// Guess 2: If we are the first time on floor 5, then multiply floor0's dimz * 5
 	// Guess 3: If there's no floor0 even or any other occassion z-origin=0
-	var guess=db({"floor": floor, 'letter': 'r'}).select("z0");
+	var guess=db({"floor": floor, 'letter': 'r'}).select("z")[0];
 	if(guess[0] != undefined) {
 		$("#floorZ0").val(guess[0]);
 		floorZ0=guess[0];
 		return;
 	}
 
-	var guess=db({"floor": 0, 'letter': 'r'}).select("z1") - db({"floor": 0, 'letter': 'r'}).select("z0");
+	var guess=db({"floor": 0, 'letter': 'r'}).select("z1") - db({"floor": 0, 'letter': 'r'}).select("z")[0];
 	if(guess[0] != undefined) {
 		$("#floorZ0").val(guess[0]*floor);
 		floorZ0=guess[0]*floor;
@@ -491,7 +491,7 @@ function snappingShow(m) {//{{{
 }
 //}}}
 function cgInit() {//{{{
-	delete cg.growing;
+	//delete cg.growing;
 	cgIdUpdate();
 	cg.name=activeLetter+cgID;
 	cg.idx=cgID;
@@ -505,9 +505,9 @@ function cgInit() {//{{{
 	cg.preferredSnap=null;
 	if(cg.type=='hole') { cg.snapForce=100; } else { cg.snapForce=50; }
 	if (cg.type=='fire') {
-		cg.z.push(cg.z[0] + 50);
+		cg.z.push(cg.z[0] + 250);
 	} else if (cg.type=='evacuee') {
-		cg.z.push(cg.z[0] + 50);
+		cg.z.push(cg.z[0] + 150);
 	} else if (cg.type=='obst') {
 		cg.z.push(cg.z[0] + 100);
 	} else if (cg.type=='mvent') {
@@ -524,6 +524,7 @@ function cgInit() {//{{{
 	} else if (cg.type=='room') {
 		cg.z.push(cg.z[0] + defaults.floor_dimz);
 		cg.room_enter='yes';
+		cg.evacuees_density='auto';
 	} else {
 		cg.z.push(cg.z[0] + defaults.floor_dimz);
 	}
@@ -555,6 +556,7 @@ function cgCreate() {//{{{
 	});  
 	svg.on('mouseup', function() {
 		if(assertCgReady()) {
+			delete cg.growing;
 			cgUpdateSvg();
 			cgDb();
 			updateSnapLines();
@@ -567,16 +569,27 @@ function cgCreate() {//{{{
 //}}}
 
 function updatePosInfo(m) {//{{{
-	if('minx' in cg) { 
-		$("#apainter-texts-pos").html(m.x+" "+m.y+" "+cg.z[0]+" &nbsp; &nbsp;  size: "+Math.abs(cg.maxx-m.x)+" "+Math.abs(cg.maxy-m.y) +" "+(cg.z[1]-cg.z[0]));
-	} else {
+	if(cg.infant==1) {
 		$("#apainter-texts-pos").html(m.x+" "+m.y+" "+cg.z[0]);
+	} else {
+		b=getBbox();
+		$("#apainter-texts-pos").html(m.x+" "+m.y+" "+cg.z[0]+" &nbsp; &nbsp;  size: "+(b.max.x-b.min.x)+" "+ (b.max.y-b.min.y) +" "+(cg.z[1]-cg.z[0]));
 	}
 }
 //}}}
+function ctrlDrawing(m) {//{{{
+	if("infant" in cg && "growing" in cg) { cg.polypoints.push([m.x,m.y]); } 
+	if(cg.polypoints.length==0) { return; }
+	p0=[cg.polypoints[0][0], cg.polypoints[0][1]];
+	p1=[m.x, cg.polypoints[0][1]];
+	p2=[m.x, m.y];
+	p3=[cg.polypoints[0][0], m.y];
+	cg.polypoints=[p0,p1,p2,p3];
+}
+//}}}
 function cgDecidePoints(m) {//{{{
+	if (event.ctrlKey) { ctrlDrawing(m); return; }
 
-	if (event.ctrlKey) { return; }
 	if("x" in activeSnap) { px=activeSnap.x; } else { px=m.x; }
 	if("y" in activeSnap) { py=activeSnap.y; } else { py=m.y; }
 	if("growing" in cg) { cg.polypoints.push([px,py]); }
@@ -635,8 +648,8 @@ function assertCgReady() {//{{{
 
 	if(cg.type=='underlay_scaler') { 
 		b=getBbox();
-		underlayForm(b.maxx-b.minx);
-		return false;
+		underlayForm(b.max.x-b.min.x);
+		return true;
 	}
 
 	return true;
@@ -658,16 +671,15 @@ function cgStartDrawing() {//{{{
 	$('right-menu-box').fadeOut(0); 
 	legend();
 	$('#legend_'+activeLetter).css({'color': '#f00', 'background-color': '#000', 'border-bottom': "1px solid #0f0"});
-	if(activeLetter=='m') { 
-		cgPolyCreate();
-	} else {
-		cgCreate();
-	}
+	cgCreate();
+	underlayPointerEvents(stopDragging=1);
 }
 //}}}
 function cgEscapeCreate() {//{{{
-	if(!isEmpty(cg) && "growing" in cg) { cgRemove(); } 
+	if(!isEmpty(cg) && "growing" in cg) { cgRemove(undoRegister=0); } 
 	$(".temp-poly").remove();
+	$("#apainter-texts-pos").html('');
+	$(".building-vertex").remove() 
 	$(".cg-selected").removeClass('cg-selected'); 
 	svg.on('mousedown', null); svg.on('mousemove', null); svg.on('mouseup', null); 
 	snappingHide();
@@ -692,6 +704,7 @@ function dbUpdateCadJsonStr() { //{{{
 			cad_json["exit_type"]=i.exit_type;
 		} else if(i.type=='room') {
 			cad_json["room_enter"]=i.room_enter; 
+			cad_json["evacuees_density"]=i.evacuees_density; 
 		} else if(i.type=='mvent') {
 			cad_json["mvent_throughput"]=i.mvent_throughput;
 		}
@@ -702,7 +715,7 @@ function dbUpdateCadJsonStr() { //{{{
 //}}}
 function saveTxtCadJson() {//{{{
 	var json_data=$("#cad-json-textarea").val();
-	ajaxSaveCadJson(json_data, fire_model); 
+	ajaxSaveCadJson(json_data); 
 }
 //}}}
 function svgGroupsInit(json) { //{{{
@@ -753,12 +766,13 @@ function cgMake(floor,letter,record) { //{{{
 
 	if('exit_type' in record)        { cg.exit_type=record.exit_type; }
 	if('room_enter' in record)       { cg.room_enter=record.room_enter; }
+	if('evacuees_density' in record) { cg.evacuees_density=record.evacuees_density; }
 	if('mvent_throughput' in record) { cg.mvent_throughput=record.mvent_throughput; }
 }
 //}}}
-function ajaxSaveCadJson(json_data, fire_model) { //{{{
-	$.post('/aamks/ajax.php?ajaxApainterExport', { 'data': json_data, 'fire_model': fire_model }, function (json) { 
-		ajax_msg(json); 
+function ajaxSaveCadJson(json_data) { //{{{
+	$.post('/aamks/ajax.php?ajaxApainterExport', { 'data': json_data }, function (json) { 
+		amsg(json); 
 		importCadJson();
 	});
 }
@@ -770,21 +784,15 @@ function importCadJson() { //{{{
 		// We loop thru cgDb() here which updates the cg
 		// At the end the last elem in the loop would be the cg
 		// which may run into this-elem-doesnt-belong-to-this-floor problem.
-		ajax_msg(json); 
-		if(json.err=='FDS') {
-			fire_model='FDS';
-			startTxtView(json.data);
-		} else {
-			fire_model='CFAST';
-			svgGroupsInit(json.data);
-			json2db(json.data);
-			_.each(json.data, function(data,floor) { 
-				importImgUnderlay(data['UNDERLAY_IMG'],floor); 
-				importFloorUnderlay(data['UNDERLAY_FLOOR'],floor); 
-			});
-			cg={};
-			d3.select('#floor_text').text("floor "+floor+"/"+floorsCount);
-		}
+		amsg(json); 
+		svgGroupsInit(json.data);
+		json2db(json.data);
+		_.each(json.data, function(data,floor) { 
+			importImgUnderlay(data['UNDERLAY_IMG'],floor); 
+			importFloorUnderlay(data['UNDERLAY_FLOOR'],floor); 
+		});
+		cg={};
+		d3.select('#floor_text').text("floor "+floor+"/"+floorsCount);
 	});
 }
 //}}}
@@ -804,7 +812,7 @@ function dbReorder() {//{{{
 	// Re-enumerate all elems in this fashion: r1, r2, r3, ..., d1, d2, d3, ...
 	// CFAST expects elems to be numbered as above
 	// Evacuees will be in original order for navmesh testing pairing: e1 > e2, e3 > e4, ...
-	if(db({"type": 'fire'}).get().length > 1) { ajax_msg({ 'err': 1, 'msg': "Aamks allows for max one fire" }); }
+	if(db({"type": 'fire'}).get().length > 1) { amsg({ 'err': 1, 'msg': "Aamks allows for max one fire" }); }
 
 	db.sort("idx");
 	var ee=db({"type": 'evacuee'}).get();
@@ -823,6 +831,7 @@ function dbReorder() {//{{{
 			idx++;
 		}
 	}
+	var idx=1;
 	for (var i in ee) {
 		ee[i]['idx']=idx;
 		ee[i]['name']="e"+idx;
@@ -854,13 +863,13 @@ function db2cadjson() {//{{{
 		cadjson[floor]['UNDERLAY_FLOOR']=underlayFloorSaveCad(floor);
 	}
 	pretty=JSON.stringify(cadjson,null,2);
-	ajaxSaveCadJson(pretty, fire_model);
+	ajaxSaveCadJson(pretty);
 	return pretty;
 }
 //}}}
 function floorCopy() {	//{{{
 	c2f=Number($("#copy_to_floor").val());
-	var guess=db({"floor": floor, 'letter': 'r'}).select("z1") - db({"floor": floor, 'letter': 'r'}).select("z0");
+	var guess=db({"floor": floor, 'letter': 'r'}).select("z")[1] - db({"floor": floor, 'letter': 'r'}).select("z")[0];
 	if(guess[0] != undefined) {
 		var z0=guess[0] * c2f;
 	} else {
@@ -876,9 +885,9 @@ function floorCopy() {	//{{{
 		cg.floor=c2f;
 		cg.idx=cgID;
 		cg.name=cg.letter + cgID;
-		cg.z0=z0;
-		cg.z1=z0 + m.z1 - m.z0;
-		cgDb();
+		cg.z[0]=z0;
+		cg.z[1]=z0 + m.z[1] - m.z[0];
+		cgDb(undoRegister=0);
 		cgSvg();
 	});
 	$("#floor"+c2f).attr({"class": "floor", "fill-opacity": 0.4, "visibility": "hidden"});
@@ -886,7 +895,7 @@ function floorCopy() {	//{{{
 	cg={};
 	updateSnapLines();
 	showGeneralBox();
-	ajax_msg({'err':0, 'msg': "floor"+floor+" copied onto floor"+c2f});
+	amsg({'err':0, 'msg': "floor"+floor+" copied onto floor"+c2f});
 }//}}}
 function cgSelect(elems, blink=1, showProps=1) {//{{{
 
@@ -908,9 +917,9 @@ function cgSelect(elems, blink=1, showProps=1) {//{{{
 //}}}
 function bulkPlainProps() {//{{{
 	var tbody='';
-	tbody+="<tr><td>name<td>z";
+	tbody+="<tr><td>name<td>z<td>density";
 	_.each(db({'letter': activeLetter, 'floor': floor}).get(), function (m) {
-		tbody+="<tr><td class=bulkProps id="+ m.name + ">"+ m.name +"</td><td>"+m.z;
+		tbody+="<tr><td class=bulkProps id="+ m.name + ">"+ m.name +"</td><td>"+m.z+"</td><td>"+m.evacuees_density;
 	});
 	return tbody;
 }
@@ -924,13 +933,13 @@ function bulkProps() {//{{{
 	html+=bulkPlainProps();
 	html+="</table>";
 	html+="</div>";
-
 	rightBoxShow(html, 0);
 }
 //}}}
 
 function roomProps() {//{{{
 	pp="<input id=alter-room-enter type=hidden value=0>";
+	pp="<input id=alter-evacuees-density type=hidden value='auto'>";
 	if(cg.type=='room') {
 		v=db({'name':cg.name}).get()[0];
 		pp='';
@@ -940,6 +949,8 @@ function roomProps() {//{{{
 		pp+="<option value='yes'>yes</option>";
 		pp+="<option value='no'>no</option>";
 		pp+="</select>";
+		pp+="<tr><td>density <withHelp>?<help> Draws the given number of  evacuees per square metre. <br><orange>auto</orange> draws the evacuees according to the building profile.<br><br>You can alter global densities in Project > Editor: text<br>evacuees_density:<br>{ ROOM: 0.33, COR: 0.05, STAI: 0.05, HALL: 0.05 }</help></withHelp>";
+		pp+="<td><input type=text style='width: 40px' id=alter-evacuees-density value='"+v.evacuees_density+"'>";
 	}
 	return pp;
 }
@@ -972,16 +983,17 @@ function doorProps() {//{{{
 
 function rightBoxShow(html, close_button=1) {//{{{
 	$('right-menu-box').html("");
-	if(close_button==1) { $('right-menu-box').append("<close-right-menu-box><img src=/aamks/css/close.svg></close-right-menu-box><br>"); }
+	if(close_button==1) { $('right-menu-box').append("<close-right-menu-box><img id=close-img-svg src=/aamks/css/close.svg></close-right-menu-box><br>"); }
 	$('right-menu-box').append(html);
 	$('right-menu-box').fadeIn(); 
+	underlayPointerEvents();
 }
 //}}}
-function showGeneralBox() {//{{{
+function showGeneralBox() { //{{{
 	rightBoxShow(
 		"<table class=nobreak>"+
 		"<input id=general_setup type=hidden value=1>"+
-		"<tr><td colspan=2 style='text-align: center'>since now"+
+		"<tr><td colspan=2 style='text-align: center'>Since now"+
 		"<tr><td>floor<td><input id=floor type=text name=floor size=4 value="+floor+">"+ 
 		"<tr><td>floor's z-origin <td><input id=floorZ0 type=text size=4 name=floorZ0 value="+floorZ0+">"+
 		"<tr><td>door's width <td><input id=default_door_width type=text size=4 name=default_door_width  value="+defaults.door_width+">"+
@@ -989,6 +1001,9 @@ function showGeneralBox() {//{{{
 		"<tr><td>room's z-dim <td><input id=default_floor_dimz type=text size=4 name=default_floor_dimz value="+defaults.floor_dimz+">"+
 		"<tr><td>window's z-dim <td><input id=default_window_dimz type=text size=4 name=default_window_dimz value="+defaults.window_dimz+">"+
 		"<tr><td>window's z-offset <td><input id=default_window_offsetz type=text size=4 name=default_window_offsetz value="+defaults.window_offsetz+">"+
+		"</table><br>"+
+		"<table class=nobreak>"+
+		"<tr><td colspan=2 style='text-align: center'>utils"+
 		"<tr><td colspan=2><button id=btn_copy_to_floor class=blink>copy</button> floor"+floor+" to floor <input id=copy_to_floor type=text style='width:20px' value=''>"+ 
 		"</table>"
 	);
@@ -1000,14 +1015,13 @@ function showHelpBox() {//{{{
 		"<tr><td><letter>letter</letter> + <letter>leftMouse</letter><td> create element"+
 		"<tr><td><letter>rightMouse</letter><td> element properties"+
 		"<tr><td>hold <letter>ctrl</letter> <td> disable snapping"+ 
-		"<tr><td><letter>h</letter>	<td> 2D/3D views"+ 
+		"<tr><td><letter>v</letter>	<td> 2D/3D views"+ 
 		"<tr><td><letter>n</letter>	<td> loop floors"+ 
 		"<tr><td><letter>x</letter>	<td> delete active"+
 		"<tr><td><letter>l</letter>	<td> list all of active type"+
-		"<tr><td><letter>ctrl</letter> + <letter>alt</letter>	<td> underlays"+
-		"<tr><td><letter>ctrl</letter> + <letter>s</letter>	<td> save and read"+
-		"<tr><td><letter>ctrl</letter> + <letter>z</letter> <td> undo"+ 
-		"<tr><td><letter>ctrl</letter> + <letter>F1</letter> <td> geometry as text"+ 
+		"<tr><td><letter>ctrl</letter> + <letter>i</letter>		<td> geometry as text"+ 
+		"<tr><td><letter>ctrl</letter> + <letter>s</letter>		<td> save and read"+
+		"<tr><td><letter>ctrl</letter> + <letter>z</letter>		<td> undo"+ 
 		"<tr><td><letter>=</letter>	<td> original zoom"+
 		"<tr><td><letter>escape</letter><td> cancel create"+
 		"</table>"
@@ -1027,12 +1041,18 @@ function propsXYZ() {//{{{
 }
 //}}}
 function showCgPropsBox() {//{{{
+
+	if(cg.letter==undefined)					 { return; }   // mouse leaving right boxes
+	if(db({'name':cg.name}).get()[0]==undefined) { return; }   // clicking right boxes while new element is very infant
+	if($("#uimg_remove").length)				 { return; }   // return if underlay menu
+
 	showBuildingLabels(1);
 	activeLetter=cg.letter;
-	
 	rightBoxShow(
 	    "<input id=geom_properties type=hidden value=1>"+
-	    "<center><red>&nbsp; "+cg.name+" &nbsp; "+gg[cg.letter]['x']+"</red><br>"+
+	    "<center><red>&nbsp; "+cg.name+" &nbsp; "+gg[cg.letter]['x']+"</red>"+
+		"<input type=hidden id=alter-geom-name-replaced value='"+cg.name+"'>"+
+		"<input id=alter-geom-letter value='"+cg.letter+"'><br>"+
 		propsXYZ()+
 		"<table>"+
 		roomProps()+
@@ -1057,13 +1077,33 @@ function saveRightBoxGeneral() {//{{{
 	legend();
 }
 //}}}
+function checkGeomReplacement() {//{{{
+	var origGeomName=$("#alter-geom-name-replaced").val();
+	if(cg.name != origGeomName) {
+		var preserveLetter=cg.letter;
+		cgSelect(origGeomName);
+		var newGeom=deepcopy(cg);
+		cgRemove(undoRegister=0);
+		cg=newGeom;
+		cg.letter=preserveLetter;
+		cg.name=cg.letter+cg.idx;
+		$("#"+cg.name).remove();
+		cgDb(undoRegister=0); cgSvg(); cgCss(); cgEscapeCreate();
+	}
+}
+//}}}
+function validateForm() {//{{{
+	if(!cg.evacuees_density.match(/^auto$|^\d*\.?\d*$/)) { amsg({'err':1, 'msg': "Examples of valid density values:<br>auto<br>0.12"}); }
+	if($.isNumeric($("#alter-evacuees-density").val())) { cg.evacuees_density=Number($("#alter-evacuees-density").val()); } 
+}
+//}}}
 function saveRightBoxCgProps() {//{{{
 	if(cg.type=='evacuee') {
 		cg.polypoints=[[Number($("#alter-px").val()), Number($("#alter-py").val())]];
 		cg.z=[50,50];
 		$("#"+cg.name).attr('cx', cg.polypoints[0][0]).attr('cy', cg.polypoints[0][1]);   
 		cgUpdateSvg();
-		cgDb();
+		cgDb(undoRegister=0);
 	} else {
 		cg.polypoints=[];
 		_.each($("#alter-polypoints").val().split("\n"), function(m) { 
@@ -1071,13 +1111,18 @@ function saveRightBoxCgProps() {//{{{
 			if(arr.length==2 && $.isNumeric(arr[0]) && $.isNumeric(arr[1])) { cg.polypoints.push([Number(arr[0]), Number(arr[1])]); }
 		});
 		cg.room_enter=$("#alter-room-enter").val();
+		cg.evacuees_density=$("#alter-evacuees-density").val();
 		cg.exit_type=$("#alter-exit-type").val();
+		cg.letter=$("#alter-geom-letter").val();
 		cg.mvent_throughput=Number($("#alter-mvent-throughput").val());
-
+		validateForm();
+		var zz=$("#alter-z").val().split(",")
+		cg.z=[Number(zz[0]), Number(zz[1])];
+		checkGeomReplacement();
 		if(cg.floor != floor) { return; } // Just to be sure, there were (hopefully fixed) issues
 		cgUpdateSvg();
 		cgCss();
-		cgDb();
+		cgDb(undoRegister=0);
 		updateSnapLines();
 	}
 
@@ -1090,10 +1135,26 @@ function saveRightBox() {//{{{
 }
 //}}}
 
+function enumVertices() {//{{{
+	var mm=d3.select("#buildingLabels");
+	if(['room', 'obst', 'mvent', 'fire', 'vvent'].includes(cg.type)) { 
+		_.each(cg.polypoints, function(p) { 
+			mm.append("text").attr("class","building-vertex").attr("x",p[0]+5).attr("y",p[1]-15).text(p[0]+", "+p[1]);
+		});
+	}
+	if(['evacuee', 'door', 'hole'].includes(cg.type)) { 
+        if (cg.polypoints.length>0) { 
+            p=cg.polypoints[0];
+            mm.append("text").attr("class","building-vertex").attr("x",p[0]+50).attr("y",p[1]+80).text(p[0]+", "+p[1]);
+        }
+	}
+}
+//}}}
 function showBuildingLabels(aggressive=0, elems=[]) {//{{{
 	$("#buildingLabels").html("");
 	if(aggressive==1 || aamksUserPrefs.apainter_labels==1) { 
 		var mm=d3.select("#buildingLabels");
+		enumVertices();
 		if(elems.length>0) {
 			_.each(elems, function(vv) { 
 				_.each(db({'name': vv}).get(), function(v) { 
@@ -1119,7 +1180,7 @@ function verifyIntersections() {//{{{
 					cgSelect([p1.name, p2.name]);
 					activeLetter=p1.letter;
 					bulkProps();
-					ajax_msg({'err':1, 'msg':"Overlaping rooms:<br>"+p1.name+"<br>"+p2.name}); 
+					amsg({'err':1, 'msg':"Overlaping rooms:<br>"+p1.name+"<br>"+p2.name}); 
 				}
 			});
 		});
@@ -1133,8 +1194,8 @@ function sceneBuilder() { //{{{
 	d3.select('body').append('legend0');
 	d3.select('body').append('legend2');
 	d3.select('view2d').append('legend1');
-	d3.select('view2d').append("div").attr("id", "apainter-texts-floor");
-	d3.select('view2d').append("div").attr("id", "apainter-texts-keys").html("n: next floor<br>h: 2D/3D view");
+	d3.select('view2d').append("div").attr("id", "apainter-texts-floor").html("floor "+floor+"/"+floorsCount);
+	d3.select('view2d').append("div").attr("id", "apainter-texts-keys").html("n: next floor");
 	d3.select('view2d').append("div").attr("id", "apainter-texts-pos");
 	make_legend0("apainter");
 	make_legend2("apainter");

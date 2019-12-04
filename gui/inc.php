@@ -1,5 +1,6 @@
 <?php
 session_name('aamks');
+require_once("lib.form.php"); 
 session_start();
 ini_set('error_reporting', E_ALL);
 ini_set('display_errors',1);
@@ -42,7 +43,7 @@ class Aamks {/*{{{*/
 
 	public function ch_main_vars($r) { #{{{
 		if(!array_key_exists('user_id', $r) || !array_key_exists('user_name', $r) || !array_key_exists('user_photo', $r) || !array_key_exists('project_id', $r) || !array_key_exists('project_name', $r) || !array_key_exists('scenario_id', $r) || !array_key_exists('scenario_name', $r)) { dd($r); die("ch_main_vars() bug"); }
-		if(!isset($r['preferences']['apainter_editor'])) { $r['preferences']=$this->mk_default_preferences($r['user_id']); }
+		if(empty($r['preferences'])) { $r['preferences']=$this->mk_default_preferences($r['user_id']); }
 
 		$prefs=json_decode($r['preferences'],1);
 		ksort($prefs);
@@ -73,6 +74,36 @@ class Aamks {/*{{{*/
 		}
 	}
 /*}}}*/
+	public function scenario_from_template($header='form.php?edit') { # {{{
+		$template_json=get_template_defaults('setup1');
+		$template_json['project_id']=$_SESSION['main']['project_id'];
+		$template_json['scenario_id']=$_SESSION['main']['scenario_id'];
+		$s=json_encode($template_json, JSON_NUMERIC_CHECK);
+		$this->write_scenario($s, $header);
+	}
+/*}}}*/
+
+	private function assert_json_ids($data) { #{{{
+		// User is not allowed to alter their project/scenario ids
+		// At least textarea editor would allow for this
+
+		$conf=json_decode($data,1);
+		$conf['project_id']=$_SESSION['main']['project_id'];
+		$conf['scenario_id']=$_SESSION['main']['scenario_id'];
+		return json_encode($conf, JSON_NUMERIC_CHECK);
+	}
+	/*}}}*/
+	public function write_scenario($data, $header='form.php?edit') { #{{{
+		$data=$this->assert_json_ids($data);
+		$file=$_SESSION['main']['working_home']."/conf.json";
+		$saved=file_put_contents($file, $data);
+		if($saved<=0) { 
+			$_SESSION['header_err'][]="problem saving $file";
+		}
+		header("Location: $header");
+	}
+	/*}}}*/
+
 	public function rawMenu() { #{{{
 		$r=$_SESSION['nn']->query("SELECT s.* FROM scenarios s LEFT JOIN projects p ON s.project_id=p.id WHERE user_id=$1 ORDER BY modified DESC", array($_SESSION['main']['user_id']));
 		$menu='';
@@ -136,7 +167,7 @@ class Aamks {/*{{{*/
 			<div id='hidden_form_container' style='display:none;'></div> 
 		</head>
 		<body>
-		<div id=ajax_msg></div>
+		<div id=amsg></div>
 		";
 		echo "$header";
 		$this->anyMessages();
@@ -161,7 +192,7 @@ class Aamks {/*{{{*/
 /*}}}*/
 	public function fatal($msg) {/*{{{*/
 		$home="<a href=".$_SESSION['home_url']."><img id=home src=/aamks/css/home.svg></a>";
-		echo "<fatal> $msg <br>$home</fatal>";
+		echo "<fatal>$msg</fatal>";
 		die();
 	}
 /*}}}*/
@@ -299,7 +330,7 @@ public function do_google_login(){/*{{{*/
 	/*}}}*/
 
 	private function mk_default_preferences($user_id) { #{{{
-		$default_preferences='{"apainter_editor": "easy", "navmesh_debug": 0, "apainter_labels": 1, "partitioning_debug": 0, "use_fire_model": 1, "evac_clusters": 1 }';
+		$default_preferences='{"apainter_editor": "easy", "navmesh_debug": 0, "apainter_labels": 1, "partitioning_debug": 0 }';
 		$this->query("UPDATE users SET preferences=$1 WHERE id=$2", array($default_preferences, $user_id));
 		return $default_preferences;
 	}

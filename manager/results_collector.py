@@ -27,7 +27,9 @@ try:
             self.meta = None
 
             self.json=Json()
-            self._fetch_meta()
+            if os.environ['AAMKS_LOCAL_WORKER'] == '0':
+                self._fetch_meta()
+            self.meta=self.json.read(self.meta_file)
             self._animation()
             self.psql_report()
 # }}}
@@ -40,7 +42,9 @@ try:
             else: 
                 pass
 
-            self.meta=self.json.read(self.meta_file)
+            source = self.host+':'+self.meta['path_to_project']+'workers/'+str(self.meta['sim_id'])+'/'+self.meta['animation']
+            dest = self.meta['path_to_project']+'workers/'+str(self.meta['sim_id'])+'/'+self.meta['animation']
+            Popen(["scp", source, dest])
 # }}}
         def _fire_origin_coords(self, sim_id):# {{{
             room=self.meta['fire_origin']
@@ -50,9 +54,6 @@ try:
             return z['floor'], z['center_x'], z['center_y']
 # }}}
         def _animation(self):# {{{
-            source = self.host+':'+self.meta['path_to_project']+'workers/'+str(self.meta['sim_id'])+'/'+self.meta['animation']
-            dest = self.meta['path_to_project']+'workers/'+str(self.meta['sim_id'])+'/'+self.meta['animation']
-            Popen(["scp", source, dest])
 
             self.jsonOut=OrderedDict()
             self.jsonOut['sort_id']=int(sim_id)

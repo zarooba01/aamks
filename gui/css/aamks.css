@@ -253,7 +253,7 @@ close-left-menu-box:hover, close-right-menu-box:hover  { opacity: 0.3; }
 
 .left-menu                    { padding-left: 15px; }
 .left-menu a, left-menu-box a { width: 80px !important; text-align: center !important; }
-#ajax_msg                     { display: none; position: fixed; left: 150px; top: 60px; max-width: 500px; padding: 10px; color: #fff; z-index: 1000; }
+#amsg                     { display: none; position: fixed; left: 150px; top: 60px; max-width: 500px; padding: 10px; color: #fff; z-index: 1000; }
 #python_msg                   { display: block; position: fixed; left: 150px; top: 60px; max-width: 500px; padding: 10px; color: #fff; z-index: 100; background-color: #800; }
 
 
@@ -296,6 +296,7 @@ status { cursor: default; float: right; }
 
 text { fill: #888; font-size: 11px; user-select: none; }
 .building-label { fill: #ddd; font-size: 50px; }
+.building-vertex { fill: #ff0; font-size: 30px; }
 
 canvas-mouse-coords { pointer-events: none; z-index:20; display: none; background-color: #600; font-size: 12px; padding: 4px; color: #fff; border: 1px solid #a77; position: absolute; }
 #div-cad-json-textarea { height:90vh; margin-left:130px }
@@ -303,3 +304,5 @@ canvas-mouse-coords { pointer-events: none; z-index:20; display: none; backgroun
 letter { display: inline; padding: 0px 4px 1px 4px; background-color: #960; color: #fff;  }
 #alter-polypoints { margin-left:20px; margin-top: 8px; height: 140px; width: 120px }
 #alter-z { margin-left: 20px; height: 20px; width: 110px }
+#alter-geom-letter { width: 20px; }
+#apainter-next-view::first-letter { background-color: #960; padding-left: 3px; padding-right: 3px; margin-right: 1px; }
