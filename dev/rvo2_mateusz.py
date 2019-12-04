@@ -42,16 +42,21 @@ class Queue(Queue):
         data = self.queue.pop(0)
         self.queue.append(None)
         if data is not None:
-            #print(data)
+            self.counter[data].append("Done")
             return True# }}}
     def pop_none(self):# {{{
         if self.queue[0] is None:
             self.queue.pop(0)
-            self.queue.append(None)# }}}
+            self.queue.append(None)
+        else:
+            for i in range(len(self.queue)):
+                if self.queue[i] == None:
+                    del self.queue[i]
+                    break# }}}
     def only_pop(self):# {{{
         data = self.queue.pop(0)
-        #print(data, "*")
         if data is not None:
+            self.counter[data].append("Done")
             return True
         else:
             return False# }}}
@@ -113,19 +118,8 @@ class Prepare_Queues:
     def move(self):# {{{
         self.insert = 0
         agent_dropped = 0
-        #awaitings = [(que.queue[0], que.moved, que) for que in sorted(self.ques, key=lambda x: x.moved, reverse=True)]
-        #for agent, moved, que in awaitings:
-        #    if moved:
-        #        que.moved = False
-        #        if que.only_pop():
-        #            agent_dropped += 1
-        #    else:
-        #        if agent_dropped < self.doors:
-        #            if que.pop():
-        #                agent_dropped += 1
-        #        else:
-        #            que.pop_none()
         for que in sorted(self.ques, key=lambda x: x.moved, reverse=True):
+            que.count()
             if que.moved:
                 que.moved = False
                 if que.only_pop():
@@ -136,7 +130,6 @@ class Prepare_Queues:
                         agent_dropped += 1
                 else:
                     que.pop_none()# }}}
-
     def listed_ques(self):# {{{
         for i in self.ques:
             print(i.give_position())
@@ -154,7 +147,13 @@ class Prepare_Queues:
                 x += i*100
                 y += i*100
                 return [x,y]
+    def count(self):
+        for i in self.ques:
+            print(i)
+            i.print_count()
+        print("\n\n")
 # }}}
+
 class EvacEnv:
     def __init__(self):# {{{
         self.Que = Prepare_Queues()
@@ -165,7 +164,7 @@ class EvacEnv:
         time=1
         #self.sim rvo2.PyRVOSimulator TIME_STEP , NEIGHBOR_DISTANCE , MAX_NEIGHBOR , TIME_HORIZON , TIME_HORIZON_OBSTACLE , RADIUS , MAX_SPEED
         self.sim = rvo2.PyRVOSimulator(time     , 40                , 5            , time         , time                  , self.evacuee_radius , 30)
-        self._anim={"simulation_id": 1, "simulation_time": 20, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
+        self._anim={"simulation_id": 1, "simulation_time": 60, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
         self._create_agents()
         self._load_obstacles()
         Vis({'highlight_geom': None, 'anim': '1/f1.zip', 'title': 'x', 'srv': 1})
@@ -184,10 +183,14 @@ class EvacEnv:
             self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
             self.agents[aa]['origin']=(i['x0'],i['y0'])
-            if int(aa[1:])<76:
-                self.agents[aa]['target']=(1000, i['y0'])
-            else:
-                self.agents[aa]['target']=(2292, i['y0'])
+            if int(aa[1:])<21:
+                self.agents[aa]['target']=(990, 325)
+            elif int(aa[1:])>=21 and int(aa[1:])<40:
+                self.agents[aa]['target']=(990, 1510)
+            elif int(aa[1:])>=40 and int(aa[1:])<60:
+                self.agents[aa]['target']=(2300, 335)
+            elif int(aa[1:])>=60 and int(aa[1:])<=80:
+                self.agents[aa]['target']=(2300, 1480)
         self._positions()
 # }}}
     def _load_obstacles(self):# {{{
@@ -273,6 +276,7 @@ class EvacEnv:
             self._add_to_staircase()
             self.Que.move()
             #self.Que.listed_ques()
+        self.Que.count()
 # }}}
 
 e=EvacEnv()
@@ -282,3 +286,14 @@ e._write_zip()
 # z 3 piętra wyjście na 2 piętro
 # wchodzenie pod górę
 # część wspólna z poprzedniej kolejki, prędkość 0, reszta jeden krok
+
+
+# filmik ewakuacji
+# kryteria oceniania modeli  ewakuacji w klatkach
+# jakościowe, ilościowe
+# http://sci-hub.tw/
+# do-.org wkleić na sci hub
+# https://scholar.google.com
+# simple video recorder
+# gęstość/prędkość
+# łączenie strumieni

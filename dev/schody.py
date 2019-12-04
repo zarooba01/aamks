@@ -16,6 +16,7 @@ class Queue:
         self.floor_space = floor_space
         self.queue = floor*floor_space*[None]
         self.moved = False
+        self.counter = {}
 
     def __repr__(self):
         return str(self.name)+"-queue"
@@ -32,10 +33,12 @@ class Queue:
         if self.queue[floor*self.floor_space] is None:
             if self.queue[floor*self.floor_space+1] is None:
                 self.queue[floor*self.floor_space] = data
+                self.counter[data] = [floor*self.floor_space, 0]
                 return 1
             else:
                 if not random.randint(0,3):
                     self.queue[floor*self.floor_space] = data
+                    self.counter[data] = [floor*self.floor_space, 0]
                     return 1
                 else:
                     return 0
@@ -51,6 +54,7 @@ class Queue:
     def insert(self, floor, data):
         self.moved = True
         self.queue.insert(floor*self.floor_space, data)
+        self.counter[data] = [floor*self.floor_space, 0]
 
     def pop(self):
         self.moved = False
@@ -67,6 +71,17 @@ class Queue:
     def go_on(self, positions):
         self.pop()
         self.set_position(positions)
+
+    def count(self):
+        for i in self.queue:
+            if i is not None:
+                self.counter[i][1] += 1
+
+    def print_count(self):
+        for i in self.counter.keys():
+            print(i, " ",self.counter[i])
+            if self.counter[i][0]>self.counter[i][1] and self.counter[i][2] == "Done":
+                print("tsooooooooo")
 
 class Agent:  # {{{
 
