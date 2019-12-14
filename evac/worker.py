@@ -30,11 +30,8 @@ class Worker:
 
     def __init__(self):
         self.json=Json()
-        x = self.json.read("/home/aamks_users/mimoohowy@gmail.com/demo/simple/workers/402/evac.json")
-        print(x)
-        sys.exit()
         self.start_time = time.time()
-        self.url = sys.argv[1]
+        self.url=sys.argv[1] if len(sys.argv)>1 else "{}/workers/1/".format(os.environ['AAMKS_PROJECT'])
         self.vars = OrderedDict()
         self.results = dict()
         self.obstacles = None

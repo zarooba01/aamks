@@ -11,6 +11,7 @@ import json
 from geom.nav import Navmesh
 from shapely.geometry import LineString
 from include import Sqlite
+from include import Json
 from math import log
 import os
 from scipy.stats import norm
@@ -22,7 +23,7 @@ class EvacEnv:
 
     def __init__(self, aamks_vars):
         self.evacuees = Evacuees
-        print(1111)
+        self.json=Json()
         self.max_speed = 0
         self.current_time = 0
         self.positions = []
@@ -56,11 +57,8 @@ class EvacEnv:
         self.elog = self.general['logger']
         self.elog.info('ORCA on {} floor initiated'.format(self.floor))
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        print("dir path", dir_path)
-        path_to_evac = '/home/aamks_users/mimoohowy@gmail.com/demo/simple'
-        print(path_to_evac)
-        self.json=Json()
-        x = self.json.read("/home/aamks_users/mimoohowy@gmail.com/demo/simple/workers/402/evac.json")
+        x = self.json.read("/home/aamks_users/mimoohowy@gmail.com/demo/simple/workers/1/evac.json")
+        print('json.read', x)
         #print(self.evac_data)
 
     def _find_closest_exit(self, evacuee):

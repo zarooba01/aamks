@@ -48,8 +48,12 @@ class PartitionQuery:
         self._sqlite_cell2compa()
         self._init_compa_conditions()
 
-        if self.project_conf['fire_model']=='CFAST':
+        if self.project_conf['fire_model'] == 'CFAST':
             self._cfast_headers() 
+        elif self.project_conf['fire_model'] == 'None':
+            for room,data in self.compa_conditions.items():
+                for k,v in data.items():
+                    self.compa_conditions[room][k]=0
 # }}}
     def _sqlite_query_vertices(self):# {{{
         ''' 
@@ -145,6 +149,12 @@ class PartitionQuery:
         Application needs to call us prior to massive queries for conditions at (x,y).
         '''
 
+        if self.project_conf['fire_model'] == 'None':
+            for room,data in self.compa_conditions.items():
+                self.compa_conditions[room]['TIME']=time
+            #dd(self.compa_conditions)
+            return 1 # OK
+
         for letter in ['n', 's', 'w']:
             f = 'cfast_{}.csv'.format(letter)
             with open(f, 'r') as csvfile:
@@ -164,7 +174,7 @@ class PartitionQuery:
             for m in range(len(needed_record)):
                 if self._headers[letter]['params'][m] in self.relevant_params and self._headers[letter]['geoms'][m] in self.all_compas:
                     self.compa_conditions[self._headers[letter]['geoms'][m]][self._headers[letter]['params'][m]] = needed_record[m]
-        return 1
+        return 1 # OK
 # }}}
     def xy2room(self,q):# {{{
         ''' 
@@ -247,9 +257,12 @@ class PartitionQuery:
         summaries of various min values.
         '''
 
+        if self.project_conf['fire_model'] == 'None':
+            return {'dcbe': 0, 'min_hgt_cor':0, 'min_hgt_compa':0, 'max_temp_compa':0, 'min_vis_cor':0, 'min_vis_compa':0 }
+
         self._collect_final_vars()
-        #dd(self.sf.query('SELECT * from finals order by param,value'))
         finals=OrderedDict()
+        #dd(self.sf.query('SELECT * from finals order by param,value'))
 
         # min(time) for HGT_COR < 1.8
         hgt = self.sf.query("SELECT MIN(time) FROM finals WHERE compa_type='c' AND param='HGT' AND value < 1.8")[0]['MIN(time)']
