@@ -14,12 +14,14 @@ class Queue:
         self.name = name
         self.floor = floor
         self.floor_space = floor_space
-        self.queue = floor*floor_space*[None]
+        self.queue = ((floor-1)*floor_space+2)*[None]
         self.moved = False
         self.counter = {}
 
     def __repr__(self):
         return str(self.name)+"-queue"
+    def __len__(self):
+        return len(self.queue)
 
     def add(self, floor, data):
         ''' Add append data on the floor when the space
@@ -80,8 +82,14 @@ class Queue:
     def print_count(self):
         for i in self.counter.keys():
             print(i, " ",self.counter[i])
-            if self.counter[i][0]>self.counter[i][1] and self.counter[i][2] == "Done":
-                print("tsooooooooo")
+    def capacity(self):
+        return len([x for x in self.queue if x is not None])
+
+    def poj(self):
+        return len(self.queue)
+
+    def count_completed(self):
+        return len([x for x in self.counter.values() if len(x)==3])
 
 class Agent:  # {{{
 
@@ -189,6 +197,6 @@ class Animation:  # {{{
         plt.show()  # }}}
 
 
-if __name__ == "__main__":
-    A = Pedestrians()
-    Animation().do_animation(CZAS_INTERWALU)
+#if __name__ == "__main__":
+#    A = Pedestrians()
+#    Animation().do_animation(CZAS_INTERWALU)

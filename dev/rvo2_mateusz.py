@@ -74,23 +74,26 @@ class Prepare_Queues:
         self.offsetx = offsetx
         self.offsety = offsety
         self.lenght = (self.width**2+self.height**2)**(1/2)
-        self.size = int((self.width+self.lenght)/50)
+        self.floor_space = int((self.width+self.lenght)/50)
         self.ques = self.create_queues()
+        self.size = len(self.ques[0])
         self.positions = self.create_positions() # }}}
+        self.Atotal = width/100*height/100
+        self.Dexit = (self.lenght+self.width)/100*floors
     def create_queues(self):# {{{
         que = []
         for i in range(self.number_queues):
-            que.append(Queue(i, self.floors, self.size))
+            que.append(Queue(i, self.floors, self.floor_space))
         return que# }}}
     def create_floor_positions(self,floor=0):# {{{
         positions = []
         sin_alfa = self.height/self.lenght
         cos_alfa = self.width/self.lenght
-        lenght_steps = (self.width+self.lenght)/self.size
-        for i in range(self.size):
+        lenght_steps = (self.width+self.lenght)/self.floor_space
+        for i in range(self.floor_space):
             l = i*lenght_steps
             if l>self.lenght:
-                x = self.offsetx+lenght_steps*(self.size-i)
+                x = self.offsetx+lenght_steps*(self.floor_space-i)
                 y = self.offsety+floor*self.height+self.height
             else:
                 x = self.offsetx+l*cos_alfa
@@ -136,11 +139,6 @@ class Prepare_Queues:
             #print(i.queue)            
             #print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
     def check_if_in(self, agent_id):# {{{
-        #for i in self.ques:
-        #    if i.check_if_in_que(agent_id):
-        #        return self.positions[i.give_index(agent_id)]
-        #    else:
-        #        return False
         for i in range(len(self.ques)):
             if self.ques[i].check_if_in_que(agent_id):
                 x,y = self.positions[self.ques[i].give_index(agent_id)]
@@ -148,11 +146,47 @@ class Prepare_Queues:
                 y += i*100
                 return [x,y]
     def count(self):
-        for i in self.ques:
-            print(i)
-            i.print_count()
-        print("\n\n")
+        self.ques[0].print_count()
+        #for i in self.ques:
+        #    print(i)
+        #    i.print_count()
+        #print("\n\n")
 # }}}
+    def total_number_of_people(self):# {{{
+        Ptotal=0
+        for i in self.ques:
+            Ptotal+=i.capacity()
+        return Ptotal
+    def total_completed(self):
+        number = 0
+        for i in self.ques:
+            number+=i.count_completed()
+        return number
+    def density(self):
+        Aevacuees = self.total_number_of_people()*3.14*0.25**2
+        densit = Aevacuees/self.Atotal
+        return densit
+    def density2(self):
+        return self.total_number_of_people()/((self.size-2)*self.number_queues)*100
+    def flow(self):
+        Fave = 0.42*(self.total_completed()/self.Dexit)**(1/3)
+        return Fave
+    def speed(self):
+        'speed m/s'
+        #G = lenght of the stair tread going/tread depth
+        #R = riser height of each step
+        G = 254
+        R = 190
+        if self.density() > 0.54:
+            kt = 51.8*(G/R)**0.5 #84 for corridor or doorways
+            v = kt*(1-0.266*self.density())
+        else:
+            v = 72
+        return v/60# }}}
+
+# suma tych co się ruszyli/wszystkich = vektor prędkości
+# wykres gęstość/prędkość
+            
 
 class EvacEnv:
     def __init__(self):# {{{
@@ -164,7 +198,7 @@ class EvacEnv:
         time=1
         #self.sim rvo2.PyRVOSimulator TIME_STEP , NEIGHBOR_DISTANCE , MAX_NEIGHBOR , TIME_HORIZON , TIME_HORIZON_OBSTACLE , RADIUS , MAX_SPEED
         self.sim = rvo2.PyRVOSimulator(time     , 40                , 5            , time         , time                  , self.evacuee_radius , 30)
-        self._anim={"simulation_id": 1, "simulation_time": 60, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
+        self._anim={"simulation_id": 1, "simulation_time": 20, "time_shift": 0, "animations": { "evacuees": [], "rooms_opacity": [] }}
         self._create_agents()
         self._load_obstacles()
         Vis({'highlight_geom': None, 'anim': '1/f1.zip', 'title': 'x', 'srv': 1})
@@ -261,25 +295,33 @@ class EvacEnv:
 #liczba oczekujących na danym piętrze
                 agentname, agentid = self.waitings[floor][0]
                 if self.Que.add_to_queues(floor, agentid):
-                    self.agents[agentname]['target']=(1750, 2955)
-                    self.sim.setAgentPosition(agentid, (0,0))
+                    self.agents[agentname]['target']=(9750, 3570)
+                    self.sim.setAgentPosition(agentid, (1750,3570))
                     del self.waitings[floor][0]
                     if len(self.waitings[floor])==0:
                         del self.waitings[floor]
         except:
             pass# }}}
     def _run(self):# {{{
-        for t in range(90):
+        for t in range(110):
             self.sim.doStep()
             self._update()
             #print([x for x in self.que.que() if x is not None])
             self._add_to_staircase()
             self.Que.move()
+            #print(self.Que.density2())
+            #print(self.Que.ques[0].poj())# {{{
             #self.Que.listed_ques()
-        self.Que.count()
+
+        #self.Que.count()
+        #print(self.Que.total_completed())
+        #print(self.Que.total_number_of_people())
+        #print(self.Que.density())
+        #print(self.Que.flow())
+        #print(self.Que.speed())# }}}
 # }}}
 
-e=EvacEnv()
+e=EvacEnv()# {{{
 e._run()
 e._write_zip()
 # prędkość od gęstośći, zmierzyć w ilu krokach wychodzi
@@ -296,4 +338,4 @@ e._write_zip()
 # https://scholar.google.com
 # simple video recorder
 # gęstość/prędkość
-# łączenie strumieni
+# łączenie strumieni}}}
