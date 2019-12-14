@@ -29,6 +29,10 @@ SIMULATION_TYPE = 1
 class Worker:
 
     def __init__(self):
+        self.json=Json()
+        x = self.json.read("/home/aamks_users/mimoohowy@gmail.com/demo/simple/workers/402/evac.json")
+        print(x)
+        sys.exit()
         self.start_time = time.time()
         self.url = sys.argv[1]
         self.vars = OrderedDict()
@@ -193,7 +197,6 @@ class Worker:
                 obstacles.append([tuple(x) for x in array(obst)[[0,1,2,3,4,1]]])
             if str(floor) in self.obstacles['fire']:
                 obstacles.append([tuple(x) for x in array(self.obstacles['fire'][str(floor)])[[0,1,2,3,4,1]]])
-
             eenv.obstacle = obstacles
             num_of_vertices = eenv.process_obstacle(obstacles)
             eenv.generate_nav_mesh()

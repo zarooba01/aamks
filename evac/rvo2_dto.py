@@ -22,6 +22,7 @@ class EvacEnv:
 
     def __init__(self, aamks_vars):
         self.evacuees = Evacuees
+        print(1111)
         self.max_speed = 0
         self.current_time = 0
         self.positions = []
@@ -54,6 +55,13 @@ class EvacEnv:
                                        self.max_speed)
         self.elog = self.general['logger']
         self.elog.info('ORCA on {} floor initiated'.format(self.floor))
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        print("dir path", dir_path)
+        path_to_evac = '/home/aamks_users/mimoohowy@gmail.com/demo/simple'
+        print(path_to_evac)
+        self.json=Json()
+        x = self.json.read("/home/aamks_users/mimoohowy@gmail.com/demo/simple/workers/402/evac.json")
+        #print(self.evac_data)
 
     def _find_closest_exit(self, evacuee):
         '''
@@ -159,6 +167,7 @@ class EvacEnv:
                            in range(self.sim.getNumAgents())]
 
     def set_goal(self):
+
         for e in range(self.evacuees.get_number_of_pedestrians()):
             if (self.evacuees.get_finshed_of_pedestrian(e)) == 0:
                 continue
