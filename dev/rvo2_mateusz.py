@@ -22,7 +22,9 @@ from include import Dump as dd
 from include import Vis
 from numpy.random import uniform
 # }}}
-
+import copy
+import math
+import matplotlib.pyplot as plt
 from schody import Queue 
 from schody import Agent
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
@@ -166,8 +168,10 @@ class Prepare_Queues:
         Aevacuees = self.total_number_of_people()*3.14*0.25**2
         densit = Aevacuees/self.Atotal
         return densit
-    def density2(self):
-        return self.total_number_of_people()/((self.size-2)*self.number_queues)*100
+    def density2(self, x):
+        return math.ceil(x/((self.size-2)*self.number_queues)*100)
+    def density3(self):
+        return self.ques[0].capacity()/(self.size-2)*100
     def flow(self):
         Fave = 0.42*(self.total_completed()/self.Dexit)**(1/3)
         return Fave
@@ -303,13 +307,37 @@ class EvacEnv:
         except:
             pass# }}}
     def _run(self):# {{{
-        for t in range(110):
+        x = []
+        y = []
+        for t in range(150):
             self.sim.doStep()
             self._update()
-            #print([x for x in self.que.que() if x is not None])
             self._add_to_staircase()
+
+            K = [copy.deepcopy(k.counter) for k in self.Que.ques]
+            wszyscy = self.Que.total_number_of_people()
+
             self.Que.move()
-            #print(self.Que.density2())
+
+            J = [j.counter for j in self.Que.ques]
+            krok = 0
+            stop = 0
+            for i in range(len(K)):
+                krok += len([x[0] for x, y in zip(K[i].items(), J[i].items()) if x[1][2] != y[1][2] and len(y[1])<4])
+                krok += len([x for x,y in zip(K[i].items(), J[i].items()) if len(x[1]) != len(y[1])])
+                stop += len([x[0] for x, y in zip(K[i].items(), J[i].items()) if x[1][2] == y[1][2] and len(y[1])<4])
+            if wszyscy>0:
+                x.append(self.Que.density2(wszyscy))
+                y.append(round(krok/wszyscy*100, 2))
+
+        plt.plot(x,y, "o")
+        plt.xlabel('Density [%]')
+        plt.ylabel('Speed [%]')
+        #plt.show()
+        #plt.savefig("Fig_1.png")
+
+
+            #print(self.Que.density3())
             #print(self.Que.ques[0].poj())# {{{
             #self.Que.listed_ques()
 

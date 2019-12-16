@@ -35,17 +35,17 @@ class Queue:
         if self.queue[floor*self.floor_space] is None:
             if self.queue[floor*self.floor_space+1] is None:
                 self.queue[floor*self.floor_space] = data
-                self.counter[data] = [floor*self.floor_space, 0]
+                self.counter[data] = [floor*self.floor_space, 0, 0]
                 return 1
             else:
-                if not random.randint(0,3):
+                if not random.randint(0,2):
                     self.queue[floor*self.floor_space] = data
-                    self.counter[data] = [floor*self.floor_space, 0]
+                    self.counter[data] = [floor*self.floor_space, 0, 0]
                     return 1
                 else:
                     return 0
         else:
-            if not random.randint(0,3):
+            if not random.randint(0,2):
                 if not self.moved:
                     return 2
                 else:
@@ -56,7 +56,7 @@ class Queue:
     def insert(self, floor, data):
         self.moved = True
         self.queue.insert(floor*self.floor_space, data)
-        self.counter[data] = [floor*self.floor_space, 0]
+        self.counter[data] = [floor*self.floor_space, 0, 0]
 
     def pop(self):
         self.moved = False
@@ -75,9 +75,10 @@ class Queue:
         self.set_position(positions)
 
     def count(self):
-        for i in self.queue:
+        for x, i in enumerate(self.queue):
             if i is not None:
                 self.counter[i][1] += 1
+                self.counter[i][2] = x
 
     def print_count(self):
         for i in self.counter.keys():
@@ -89,7 +90,7 @@ class Queue:
         return len(self.queue)
 
     def count_completed(self):
-        return len([x for x in self.counter.values() if len(x)==3])
+        return len([x for x in self.counter.values() if len(x)==4])
 
 class Agent:  # {{{
 
