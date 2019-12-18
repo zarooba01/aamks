@@ -54,7 +54,7 @@ class Manager():
 
 # }}}
     def add_workers(self):# {{{
-        ''' Register each host enabled in conf.json to gearman $AAMKS_SERVER (.bashrc) '''
+        ''' Register each worker enabled in conf.json to gearman '''
 
         self._access_hosts()
         for i in self.s.query("SELECT host FROM workers WHERE conf_enabled=1 ORDER BY network,host"):
@@ -86,45 +86,23 @@ class Manager():
 # }}}
     def update_workers(self):# {{{
         ''' 
-        * update git
-        * install packages
-        * workers use /etc/aamks_server.conf to define AAMKS_SERVER
+        TODO: Need to check in cluster environment
+        install / update should be separate functions
+        install needs to scp to initial script
+
+        Call the installer script on each worker:
+        -p   AAMKS_PATH (e.g. /usr/local/aamks, Aamks will be installed there on the worker)
+        -s   AAMKS_SERVER (e.g. 127.0.0.1, the worker will expect the Aamks server there)
+        -i   install worker from github
+        -u   update/inspect worker
         '''
 
         self._access_hosts()
         for i in self.s.query("SELECT distinct(host) FROM workers WHERE conf_enabled=1 ORDER BY network,host"):
             cmds=[]
             cmds.append("ssh -o ConnectTimeout=3 {} ".format(i['host']))
-            cmds.append("\"")
-            cmds.append("echo ; echo ;")
-            cmds.append("echo \`cat /etc/hostname\` ; ")
-            #cmds.append("sudo rm -rf {} ; ".format(os.environ['AAMKS_PATH']))
-            #cmds.append("git clone https://github.com/aamks/aamks; ")
-            #cmds.append("sudo cp -r aamks {}; ".format(os.environ['AAMKS_PATH']))
-            cmds.append("git -C {} pull ; ".format(os.environ['AAMKS_PATH']))
-            cmds.append("svn up /home/svn/svn_mimooh/configs; ")
-            cmds.append("sudo apt-get install --yes python3-pip ipython3 python3-urllib3 gearman sendxmpp; ")
-            cmds.append("sudo -H pip3 install --upgrade pip; ")
-            cmds.append("sudo -H pip3 install networkX numpy; ")
-            cmds.append("rm -rf ~/.cache/; ")
-            cmds.append("echo \"AAMKS_SERVER={}\" | sudo tee /etc/aamks_server.conf ; ".format(os.environ['AAMKS_SERVER']))
-            cmds.append("\"")
             Popen("".join(cmds), shell=True)
             time.sleep(5)
-
-        for i in self.s.query("SELECT distinct(host) FROM workers WHERE conf_enabled=1 ORDER BY network,host"):
-            cmds=[]
-            cmds.append("ssh -o ConnectTimeout=3 {} ".format(i['host']))
-            cmds.append("\"")
-            cmds.append("echo ; echo ;")
-            cmds.append("echo \`cat /etc/hostname\` ; ")
-            cmds.append("unset LANG ; ")
-            cmds.append("git -C {} rev-parse --short HEAD; ".format(os.environ['AAMKS_PATH']))
-            cmds.append("svn info /home/svn/svn_mimooh/configs/ | grep 'Revision' ; ")
-            cmds.append("echo AAMKS_SERVER: {} ; ".format(os.environ['AAMKS_SERVER']))
-            cmds.append("\"")
-            Popen("".join(cmds), shell=True)
-            time.sleep(1)
 
 # }}}
     def reset_gearmand(self):# {{{

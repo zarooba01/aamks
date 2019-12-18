@@ -134,6 +134,9 @@ class PartitionQuery:
         AAMKS has this delta hardcoded: CFAST dumps data in 10s intervals.
         '''
 
+        if self.project_conf['fire_model'] == 'None':
+            return 1
+
         needed_record_id=int(time/10)+1
         with open('cfast_n.csv') as f:
             num_data_records=sum(1 for _ in f)-4
@@ -152,8 +155,7 @@ class PartitionQuery:
         if self.project_conf['fire_model'] == 'None':
             for room,data in self.compa_conditions.items():
                 self.compa_conditions[room]['TIME']=time
-            #dd(self.compa_conditions)
-            return 1 # OK
+            return
 
         for letter in ['n', 's', 'w']:
             f = 'cfast_{}.csv'.format(letter)
@@ -174,7 +176,6 @@ class PartitionQuery:
             for m in range(len(needed_record)):
                 if self._headers[letter]['params'][m] in self.relevant_params and self._headers[letter]['geoms'][m] in self.all_compas:
                     self.compa_conditions[self._headers[letter]['geoms'][m]][self._headers[letter]['params'][m]] = needed_record[m]
-        return 1 # OK
 # }}}
     def xy2room(self,q):# {{{
         ''' 
