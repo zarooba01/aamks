@@ -45,7 +45,8 @@ class Queue(Queue):
         self.queue.append(None)
         if data is not None:
             self.counter[data].append("Done")
-            return True# }}}
+            return True
+        return False# }}}
     def pop_none(self):# {{{
         if self.queue[0] is None:
             self.queue.pop(0)
@@ -54,6 +55,7 @@ class Queue(Queue):
             for i in range(len(self.queue)):
                 if self.queue[i] == None:
                     del self.queue[i]
+                    self.queue.append(None)
                     break# }}}
     def only_pop(self):# {{{
         data = self.queue.pop(0)
@@ -135,47 +137,34 @@ class Prepare_Queues:
                         agent_dropped += 1
                 else:
                     que.pop_none()# }}}
-    def listed_ques(self):# {{{
-        for i in self.ques:
-            print(i.give_position())
-            #print(i.queue)            
-            #print([("poz: ",x," agent: ", i) for x, i in enumerate(i.queue) if i is not None])# }}}
     def check_if_in(self, agent_id):# {{{
         for i in range(len(self.ques)):
             if self.ques[i].check_if_in_que(agent_id):
                 x,y = self.positions[self.ques[i].give_index(agent_id)]
                 x += i*100
                 y += i*100
-                return [x,y]
-    def count(self):
-        self.ques[0].print_count()
-        #for i in self.ques:
-        #    print(i)
-        #    i.print_count()
-        #print("\n\n")
-# }}}
+                return [x,y]# }}}
+    def count(self):# {{{
+        for i in self.ques:
+            print(i)
+            i.print_count()
+        print("\n\n")# }}}
     def total_number_of_people(self):# {{{
         Ptotal=0
         for i in self.ques:
             Ptotal+=i.capacity()
-        return Ptotal
-    def total_completed(self):
+        return Ptotal# }}}
+    def total_completed(self):# {{{
         number = 0
         for i in self.ques:
             number+=i.count_completed()
-        return number
-    def density(self):
-        Aevacuees = self.total_number_of_people()*3.14*0.25**2
-        densit = Aevacuees/self.Atotal
-        return densit
-    def density2(self, x):
-        return math.ceil(x/((self.size-2)*self.number_queues)*100)
-    def density3(self):
-        return self.ques[0].capacity()/(self.size-2)*100
-    def flow(self):
+        return number# }}}
+    def density2(self, x):# {{{
+        return math.ceil(x/((self.size-2)*self.number_queues)*100)# }}}
+    def flow(self):# {{{
         Fave = 0.42*(self.total_completed()/self.Dexit)**(1/3)
-        return Fave
-    def speed(self):
+        return Fave# }}}
+    def speed(self):# {{{
         'speed m/s'
         #G = lenght of the stair tread going/tread depth
         #R = riser height of each step
@@ -186,11 +175,7 @@ class Prepare_Queues:
             v = kt*(1-0.266*self.density())
         else:
             v = 72
-        return v/60# }}}
-
-# suma tych co się ruszyli/wszystkich = vektor prędkości
-# wykres gęstość/prędkość
-            
+        return v/60# }}}}}}
 
 class EvacEnv:
     def __init__(self):# {{{
@@ -221,13 +206,13 @@ class EvacEnv:
             self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
             self.agents[aa]['origin']=(i['x0'],i['y0'])
-            if int(aa[1:])<21:
+            if int(aa[1:])<69:
                 self.agents[aa]['target']=(990, 325)
-            elif int(aa[1:])>=21 and int(aa[1:])<40:
+            elif int(aa[1:])>=69 and int(aa[1:])<132:
                 self.agents[aa]['target']=(990, 1510)
-            elif int(aa[1:])>=40 and int(aa[1:])<60:
+            elif int(aa[1:])>=132 and int(aa[1:])<199:
                 self.agents[aa]['target']=(2300, 335)
-            elif int(aa[1:])>=60 and int(aa[1:])<=80:
+            elif int(aa[1:])>=199 and int(aa[1:])<=269:
                 self.agents[aa]['target']=(2300, 1480)
         self._positions()
 # }}}
@@ -258,12 +243,7 @@ class EvacEnv:
                     self.waitings[floor].append((a['name'],a['id']))
             except:
                 self.waitings.setdefault(floor, []).append((a['name'],a['id']))
-                
-            #if self.Que.add_to_queues(floor, a['id']):
-            #    a['target']=(1750, 2955)
-            #    self.sim.setAgentPosition(a['id'], (0,0))
         return sqrt(dx**2 + dy**2)
-        
 # }}}
     def _positions(self):# {{{
         frame=[]
@@ -309,7 +289,7 @@ class EvacEnv:
     def _run(self):# {{{
         x = []
         y = []
-        for t in range(150):
+        for t in range(80):
             self.sim.doStep()
             self._update()
             self._add_to_staircase()
@@ -334,36 +314,11 @@ class EvacEnv:
         plt.xlabel('Density [%]')
         plt.ylabel('Speed [%]')
         #plt.show()
-        #plt.savefig("Fig_1.png")
+        plt.savefig("/home/mateusz/Pulpit/praca/Fig_2.png")
 
-
-            #print(self.Que.density3())
-            #print(self.Que.ques[0].poj())# {{{
-            #self.Que.listed_ques()
-
-        #self.Que.count()
-        #print(self.Que.total_completed())
-        #print(self.Que.total_number_of_people())
-        #print(self.Que.density())
+        self.Que.count()
         #print(self.Que.flow())
         #print(self.Que.speed())# }}}
-# }}}
-
-e=EvacEnv()# {{{
+e=EvacEnv()
 e._run()
 e._write_zip()
-# prędkość od gęstośći, zmierzyć w ilu krokach wychodzi
-# z 3 piętra wyjście na 2 piętro
-# wchodzenie pod górę
-# część wspólna z poprzedniej kolejki, prędkość 0, reszta jeden krok
-
-
-# filmik ewakuacji
-# kryteria oceniania modeli  ewakuacji w klatkach
-# jakościowe, ilościowe
-# http://sci-hub.tw/
-# do-.org wkleić na sci hub
-# https://scholar.google.com
-# simple video recorder
-# gęstość/prędkość
-# łączenie strumieni}}}

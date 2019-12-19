@@ -82,7 +82,7 @@ class Queue:
 
     def print_count(self):
         for i in self.counter.keys():
-            print(i, " ",self.counter[i])
+            print("{:5}: \tenter  {} \tsteps  {} \tposition  {} {}".format(i,*self.counter[i]))
     def capacity(self):
         return len([x for x in self.queue if x is not None])
 
