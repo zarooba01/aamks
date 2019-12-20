@@ -171,12 +171,20 @@ class EvacMcarlo():
 
                 density=self._get_density(r['name'],r['type_sec'],floor)
                 room_positions=self._dispatch_inside_polygons(density,r['points'], floor, name)
+                pos_to_cluster = []
+                for i in room_positions:
+                    pos_to_cluster.append(i[0:2])  # cutting list to have only necessery elements
+                groups, leaders, e_type = self.clustering(pos_to_cluster)  # parameters from clustering method
+                self.groups[floor].extend(list(groups))
+                self.leaders[floor].extend(list(leaders))
+                self.e_type[floor].extend(list(e_type))
                 positions += room_positions
 
                 for i in room_positions:
                     self.pre_evacuation[floor].append(self._make_pre_evacuation(r['name'], r['type_sec']))
 
             for name,r in evac_rooms['manual'].items():
+
                 pos_to_cluster = []
                 for i in r['positions']:
                     pos_to_cluster.append(i[0:2])  #cutting list to have only necessery elements
@@ -249,7 +257,7 @@ class EvacMcarlo():
 
                 #self._evac_conf['FLOORS_DATA'][floor]['EVACUEES'][e_id]['ETYPE'] = self.groups[floor][i]
         self.json.write(self._evac_conf, "{}/workers/{}/evac.json".format(os.environ['AAMKS_PROJECT'],self._sim_id))
-        print(self._sim_id)
+        #print(self._sim_id)
 
 # }}}
     def _evacuees_static_animator(self):# {{{
