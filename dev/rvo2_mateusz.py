@@ -25,161 +25,13 @@ from numpy.random import uniform
 import copy
 import math
 import matplotlib.pyplot as plt
-from schody import Queue 
-from schody import Agent
+from staircase import Staircase, Queue
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
 
-class Queue(Queue):
-    def set_position(self,positions):# {{{
-        pass# }}}
-    def give_index(self, agent_id):# {{{
-        return self.queue.index(agent_id)# }}}
-    def check_if_in_que(self, agent_id):# {{{
-        if agent_id in self.queue:
-            return True
-        else:
-            return False# }}}
-    def pop(self):# {{{
-        data = self.queue.pop(0)
-        self.queue.append(None)
-        if data is not None:
-            self.counter[data].append("Done")
-            return True
-        return False# }}}
-    def pop_none(self):# {{{
-        if self.queue[0] is None:
-            self.queue.pop(0)
-            self.queue.append(None)
-        else:
-            for i in range(len(self.queue)):
-                if self.queue[i] == None:
-                    del self.queue[i]
-                    self.queue.append(None)
-                    break# }}}
-    def only_pop(self):# {{{
-        data = self.queue.pop(0)
-        if data is not None:
-            self.counter[data].append("Done")
-            return True
-        else:
-            return False# }}}
-
-
-class Prepare_Queues:
-    def __init__(self, name="Str1", floors=3, number_queues=2, doors=1, width=500, height=2965/3, offsetx=1500, offsety=0):# {{{
-        self.name = name
-        self.floors = floors
-        self.number_queues = number_queues
-        self.doors = doors
-        self.insert = 0
-        self.width = width
-        self.height = height
-        self.offsetx = offsetx
-        self.offsety = offsety
-        self.lenght = (self.width**2+self.height**2)**(1/2)
-        self.floor_space = int((self.width+self.lenght)/50)
-        self.ques = self.create_queues()
-        self.size = len(self.ques[0])
-        self.positions = self.create_positions() # }}}
-        self.Atotal = width/100*height/100
-        self.Dexit = (self.lenght+self.width)/100*floors
-    def create_queues(self):# {{{
-        que = []
-        for i in range(self.number_queues):
-            que.append(Queue(i, self.floors, self.floor_space))
-        return que# }}}
-    def create_floor_positions(self,floor=0):# {{{
-        positions = []
-        sin_alfa = self.height/self.lenght
-        cos_alfa = self.width/self.lenght
-        lenght_steps = (self.width+self.lenght)/self.floor_space
-        for i in range(self.floor_space):
-            l = i*lenght_steps
-            if l>self.lenght:
-                x = self.offsetx+lenght_steps*(self.floor_space-i)
-                y = self.offsety+floor*self.height+self.height
-            else:
-                x = self.offsetx+l*cos_alfa
-                y = self.offsety+floor*self.height+l*sin_alfa
-            positions.append([x,y])
-        return positions# }}}
-    def create_positions(self):# {{{
-        positions = []
-        for i in range(self.floors):
-            positions.extend(self.create_floor_positions(floor=i))
-        positions.reverse()
-        return positions# }}}
-    def add_to_queues(self, floor, data):# {{{
-        for i in self.ques:
-            output = i.add(floor, data)
-            if output == 1:
-                return True
-            elif output == 2:
-                if self.insert < self.doors:
-                    self.insert += 1
-                    i.insert(floor, data)
-                    return True
-        return False
-                # }}}
-    def move(self):# {{{
-        self.insert = 0
-        agent_dropped = 0
-        for que in sorted(self.ques, key=lambda x: x.moved, reverse=True):
-            que.count()
-            if que.moved:
-                que.moved = False
-                if que.only_pop():
-                    agent_dropped += 1
-            else: 
-                if agent_dropped < self.doors:
-                    if que.pop():
-                        agent_dropped += 1
-                else:
-                    que.pop_none()# }}}
-    def check_if_in(self, agent_id):# {{{
-        for i in range(len(self.ques)):
-            if self.ques[i].check_if_in_que(agent_id):
-                x,y = self.positions[self.ques[i].give_index(agent_id)]
-                x += i*100
-                y += i*100
-                return [x,y]# }}}
-    def count(self):# {{{
-        for i in self.ques:
-            print(i)
-            i.print_count()
-        print("\n\n")# }}}
-    def total_number_of_people(self):# {{{
-        Ptotal=0
-        for i in self.ques:
-            Ptotal+=i.capacity()
-        return Ptotal# }}}
-    def total_completed(self):# {{{
-        number = 0
-        for i in self.ques:
-            number+=i.count_completed()
-        return number# }}}
-    def density2(self, x):# {{{
-        return math.ceil(x/((self.size-2)*self.number_queues)*100)# }}}
-    def flow(self):# {{{
-        Fave = 0.42*(self.total_completed()/self.Dexit)**(1/3)
-        return Fave# }}}
-    def speed(self):# {{{
-        'speed m/s'
-        #G = lenght of the stair tread going/tread depth
-        #R = riser height of each step
-        G = 254
-        R = 190
-        if self.density() > 0.54:
-            kt = 51.8*(G/R)**0.5 #84 for corridor or doorways
-            v = kt*(1-0.266*self.density())
-        else:
-            v = 72
-        return v/60# }}}}}}
-
 class EvacEnv:
     def __init__(self):# {{{
-        self.Que = Prepare_Queues()
+        self.Que = Staircase()
         self.json=Json()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
 
@@ -195,6 +47,7 @@ class EvacEnv:
 
 # }}}
     def _create_agents(self):# {{{
+        #self.s.query("INSERT INTO aamks_geom (name, type_pri, x0, y0) VALUES ('f500', 'EVACUEE', '690', '2300')")
         z=self.s.query("SELECT * FROM aamks_geom WHERE type_pri='EVACUEE'" )
         self.agents={}
         for i in z:
@@ -270,8 +123,8 @@ class EvacEnv:
 
         zf=zipfile.ZipFile("{}/f1.zip".format(d), 'w')
         zf.writestr("anim.json", json.dumps(self._anim))
-        zf.close()
-# }}}
+        zf.close()# }}}
+        #self.json.write(self._anim, "/home/mateusz/Pulpit/praca/anim3.json")
     def _add_to_staircase(self):# {{{
         try:
             for floor in sorted(self.waitings.keys()):
@@ -279,7 +132,7 @@ class EvacEnv:
 #liczba oczekujących na danym piętrze
                 agentname, agentid = self.waitings[floor][0]
                 if self.Que.add_to_queues(floor, agentid):
-                    self.agents[agentname]['target']=(9750, 3570)
+                    self.agents[agentname]['target']=(19750, 3570)
                     self.sim.setAgentPosition(agentid, (1750,3570))
                     del self.waitings[floor][0]
                     if len(self.waitings[floor])==0:
@@ -289,7 +142,7 @@ class EvacEnv:
     def _run(self):# {{{
         x = []
         y = []
-        for t in range(80):
+        for t in range(320):
             self.sim.doStep()
             self._update()
             self._add_to_staircase()
@@ -313,12 +166,12 @@ class EvacEnv:
         plt.plot(x,y, "o")
         plt.xlabel('Density [%]')
         plt.ylabel('Speed [%]')
-        #plt.show()
-        plt.savefig("/home/mateusz/Pulpit/praca/Fig_2.png")
+        #plt.show()# }}}
+        #plt.savefig("/home/mateusz/Pulpit/praca/Fig_3.png")
 
-        self.Que.count()
+        #self.Que.count()
         #print(self.Que.flow())
-        #print(self.Que.speed())# }}}
+        #print(self.Que.speed())
 e=EvacEnv()
 e._run()
 e._write_zip()

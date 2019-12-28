@@ -38,14 +38,14 @@ class Queue:
                 self.counter[data] = [floor*self.floor_space, 0, 0]
                 return 1
             else:
-                if not random.randint(0,2):
+                if not random.randint(0,3):
                     self.queue[floor*self.floor_space] = data
                     self.counter[data] = [floor*self.floor_space, 0, 0]
                     return 1
                 else:
                     return 0
         else:
-            if not random.randint(0,2):
+            if not random.randint(0,3):
                 if not self.moved:
                     return 2
                 else:
@@ -82,7 +82,10 @@ class Queue:
 
     def print_count(self):
         for i in self.counter.keys():
-            print("{:5}: \tenter  {} \tsteps  {} \tposition  {} {}".format(i,*self.counter[i]))
+            if len(self.counter[i])<4:
+                print("{:5}: \tenter  {} \tsteps  {} \tposition  {}".format(i,*self.counter[i]))
+            else:
+                print("{:5}: \tenter  {} \tsteps  {} \tposition  {} -- {}".format(i,*self.counter[i]))
     def capacity(self):
         return len([x for x in self.queue if x is not None])
 
