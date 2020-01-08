@@ -171,7 +171,8 @@ class Worker:
             evacuees.append(Evacuee(origin=tuple(floor['EVACUEES'][i]['ORIGIN']), v_speed=floor['EVACUEES'][i]['V_SPEED'],
                                     h_speed=floor['EVACUEES'][i]['H_SPEED'], pre_evacuation=floor['EVACUEES'][i]['PRE_EVACUATION'],
                                     alpha_v=floor['EVACUEES'][i]['ALPHA_V'], beta_v=floor['EVACUEES'][i]['BETA_V'],
-                                    node_radius=self.config['NODE_RADIUS']))
+                                    node_radius=self.config['NODE_RADIUS'], etype=floor["EVACUEES"][i]["ETYPE"], leader=floor["EVACUEES"][i]["LEADER"]))
+
             self.wlogger.debug('{} evacuee added'.format(i))
 
         e = Evacuees()

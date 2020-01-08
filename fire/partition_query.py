@@ -161,6 +161,8 @@ class PartitionQuery:
             for room,data in self.compa_conditions.items():
                 self.compa_conditions[room]['TIME']=time
                 self.compa_conditions[room]['ULO2']=20
+                self.compa_conditions[room]['ULOD']=20
+                self.compa_conditions[room]['LLOD']=20
             return
 
         for letter in ['n', 's', 'w']:

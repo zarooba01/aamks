@@ -6,7 +6,7 @@ from scipy.spatial.distance import cdist
 
 class Evacuee:
 
-    def __init__(self, origin: tuple, v_speed, h_speed, pre_evacuation, alpha_v, beta_v, node_radius) -> None:
+    def __init__(self, origin: tuple, v_speed, h_speed, pre_evacuation, alpha_v, beta_v, node_radius, etype, leader) -> None:
         """
 
         :type origin: tuple
@@ -27,6 +27,8 @@ class Evacuee:
         self.node_radius = node_radius
         self.pre_evacuation_time = pre_evacuation
         self.optical_density_at_position = None
+        self.etype=etype
+        self.leader=leader
 
         self.alpha_v = alpha_v
         self.beta_v = beta_v
