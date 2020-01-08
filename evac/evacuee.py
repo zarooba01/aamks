@@ -78,7 +78,10 @@ class Evacuee:
                 self.velocity = (0, 0)
 
     def update_speed(self):
-        extinction_coefficient = self.optical_density_at_position * 2.303
+        try:
+            extinction_coefficient = self.optical_density_at_position * 2.303
+        except:
+            extinction_coefficient = 0
         if self.beta_v == 0:
             self.beta_v = 0.00000001
         self.speed = max(self.max_speed * 0.1, self.max_speed * (1 + self.beta_v/self.alpha_v * extinction_coefficient))
