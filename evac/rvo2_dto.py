@@ -24,7 +24,6 @@ class EvacEnv:
     def __init__(self, aamks_vars):
         self.json = Json()
         self.evacuees = Evacuees
-        self.json=Json()
         self.max_speed = 0
         self.current_time = 0
         self.positions = []
@@ -57,9 +56,9 @@ class EvacEnv:
                                        self.max_speed)
         self.elog = self.general['logger']
         self.elog.info('ORCA on {} floor initiated'.format(self.floor))
-        simulation_id = 1 #przykladowa symulacja
-        self.evac_data = self.json.read("{}/workers/{}/evac.json".format(os.environ['AAMKS_PROJECT'], simulation_id))
-        self.all_evac = self.evac_data["FLOORS_DATA"]["0"]["EVACUEES"]
+        #simulation_id = 1 #przykladowa symulacja
+        #self.evac_data = self.json.read("{}/workers/{}/evac.json".format(os.environ['AAMKS_PROJECT'], simulation_id))
+        #self.all_evac = self.evac_data["FLOORS_DATA"]["0"]["EVACUEES"]
 
     def _find_closest_exit(self, evacuee):
         '''
@@ -100,7 +99,7 @@ class EvacEnv:
             s=self.evacuees.get_position_of_pedestrian(evacuee)
             od_at_agent_position = self.smoke_query.get_visibility(self.evacuees.get_position_of_pedestrian(evacuee),
                                                                    self.current_time, self.floor)
-            #print("test")
+            print("test")
         except:
             od_at_agent_position = 0, 'outside'
 
@@ -167,29 +166,32 @@ class EvacEnv:
                            in range(self.sim.getNumAgents())]
 
     def set_goal(self):
-
         for e in range(self.evacuees.get_number_of_pedestrians()):
             if (self.evacuees.get_finshed_of_pedestrian(e)) == 0:
                 continue
             else:
+                # TODO: mimooh temporary fix
+                position = self.evacuees.get_position_of_pedestrian(e)
+                goal = self.nav.nav_query(src=position, dst=self._find_closest_exit(e), maxStraightPath=32)
+                # mimooh end of fix
                 
-                #""" FOLLOWING
-                if self.evac_data["FLOORS_DATA"]["0"]["EVACUEES"]["f"+str(e)]["ETYPE"] == "ACTIVE":
-                    position = self.evacuees.get_position_of_pedestrian(e)
-                    goal = self.nav.nav_query(src=position, dst=self._find_closest_exit(e), maxStraightPath=32)
-                    #print("aktywny", self._find_closest_exit(e))
+                # #""" FOLLOWING
+                # if self.evac_data["FLOORS_DATA"]["0"]["EVACUEES"]["f"+str(e)]["ETYPE"] == "ACTIVE":
+                #     position = self.evacuees.get_position_of_pedestrian(e)
+                #     goal = self.nav.nav_query(src=position, dst=self._find_closest_exit(e), maxStraightPath=32)
+                #     print("aktywny", self._find_closest_exit(e))
 
 
-                else:
-                    position = self.evacuees.get_position_of_pedestrian(e)
-                    who_to_follow = self.evac_data["FLOORS_DATA"]["0"]["EVACUEES"]["f"+str(e)]["LEADER"]
-                    where_to_go = self.evacuees.get_position_of_pedestrian(who_to_follow)
-                    where_to_go = tuple(float(x) for x in where_to_go)
-                    #print(where_to_go)
+                # else:
+                #     position = self.evacuees.get_position_of_pedestrian(e)
+                #     who_to_follow = self.evac_data["FLOORS_DATA"]["0"]["EVACUEES"]["f"+str(e)]["LEADER"]
+                #     where_to_go = self.evacuees.get_position_of_pedestrian(who_to_follow)
+                #     where_to_go = tuple(float(x) for x in where_to_go)
+                #     print(where_to_go)
 
 
-                    goal = self.nav.nav_query(src=position, dst=where_to_go, maxStraightPath=32)
-                #"""
+                #     goal = self.nav.nav_query(src=position, dst=where_to_go, maxStraightPath=32)
+                # #"""
 
                 try:
                     vis = self.sim.queryVisibility(position, goal[2], 15)

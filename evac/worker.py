@@ -30,7 +30,7 @@ class Worker:
 
     def __init__(self):
         self.json=Json()
-        self.AAMKS_SERVER=self.json.read("/etc/aamks.conf")['AAMKS_SERVER']
+        self.AAMKS_SERVER=self.json.read("/etc/aamksconf.json")['AAMKS_SERVER']
         self.start_time = time.time()
         self.url=sys.argv[1] if len(sys.argv)>1 else "{}/workers/1/".format(os.environ['AAMKS_PROJECT'])
         self.vars = OrderedDict()
@@ -194,7 +194,11 @@ class Worker:
                 self.wlogger.info('rvo2_dto ready on {} floors'.format(floor))
 
             for obst in self.obstacles['obstacles'][str(floor)]:
-                obstacles.append([tuple(x) for x in array(obst)[[0,1,2,3,4,1]]])
+                coords = list()
+                for coord in obst:
+                    coords.append(tuple(coord))
+                coords.append(tuple(obst[1]))
+                obstacles.append(coords)
             if str(floor) in self.obstacles['fire']:
                 obstacles.append([tuple(x) for x in array(self.obstacles['fire'][str(floor)])[[0,1,2,3,4,1]]])
             eenv.obstacle = obstacles
@@ -279,7 +283,7 @@ class Worker:
         self._write_animation_zips()
         self._write_meta()
 
-        if os.environ['AAMKS_LOCAL_WORKER'] == '0':
+        if os.environ['AAMKS_WORKER'] == 'gearman':
             Popen("gearman -h {} -f aOut '{} {} {}'".format(self.AAMKS_SERVER, self.host_name, '/home/aamks_users/'+self.working_dir+'/'+self.meta_file, self.sim_id), shell=True)
             self.wlogger.info('aOut launched successfully')
         else:
@@ -313,7 +317,7 @@ class Worker:
                             'rooms_opacity': smoke_data
                         }
                         }
-        zf = zipfile.ZipFile("{}_{}_{}_anim.zip".format(self.vars['conf']['project_id'], self.vars['conf']['scenario_id'], self.sim_id), mode='w', compression=zipfile.ZIP_DEFLATED)
+        zf = zipfile.ZipFile("{}.zip".format(self.sim_id), mode='w', compression=zipfile.ZIP_DEFLATED)
         try:
             zf.writestr("anim.json", json.dumps(json_content))
             self.wlogger.info('Date for animation saved')
@@ -380,11 +384,14 @@ class Worker:
 
 
 w = Worker()
+#print(os.environ['AAMKS_WORKER'])
 if SIMULATION_TYPE == 'NO_CFAST':
     #print('Working in NO_CFAST mode')
     w.test()
-elif os.environ['AAMKS_LOCAL_WORKER'] == '1':
+elif os.environ['AAMKS_WORKER'] == 'local':
     #print('Working in LOCAL MODE')
     w.local_worker()
-else:
+elif os.environ['AAMKS_WORKER'] == 'gearman':
     w.main()
+else:
+    print('Please specify worker mode')
