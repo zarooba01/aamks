@@ -57,9 +57,7 @@ class EvacMcarlo():
             self._static_evac_conf()
             self._dispatch_evacuees()
             self._make_evac_conf()
-            # method clustring
-            # save json
-                # enter makeevaconf
+            self._cluster_coloring()
         self._evacuees_static_animator()
 
 
@@ -174,10 +172,7 @@ class EvacMcarlo():
                 pos_to_cluster = []
                 for i in room_positions:
                     pos_to_cluster.append(i[0:2])  # cutting list to have only necessery elements
-                groups, leaders, e_type = self.clustering(pos_to_cluster)  # parameters from clustering method
-                self.groups[floor].extend(list(groups))
-                self.leaders[floor].extend(list(leaders))
-                self.e_type[floor].extend(list(e_type))
+                self._clustering(floor,pos_to_cluster)  # parameters from clustering method
                 positions += room_positions
 
                 for i in room_positions:
@@ -188,10 +183,7 @@ class EvacMcarlo():
                 pos_to_cluster = []
                 for i in r['positions']:
                     pos_to_cluster.append(i[0:2])  #cutting list to have only necessery elements
-                groups, leaders, e_type=  self.clustering(pos_to_cluster)  # parameters from clustering method
-                self.groups[floor].extend(list(groups))
-                self.leaders[floor].extend(list(leaders))
-                self.e_type[floor].extend(list(e_type))
+                self._clustering(floor,pos_to_cluster)  # parameters from clustering method
 
                 positions += r['positions']
                 for i in r['positions']:
@@ -273,7 +265,7 @@ class EvacMcarlo():
             m[floor]=self.dispatched_evacuees[floor]
         self.s.query('INSERT INTO dispatched_evacuees VALUES (?)', (json.dumps(m),))
 
-    def cluster_leader(self, center, points):# {{{
+    def cluster_leader(self, center, points):
         leaders = []
         points = tuple(map(tuple, points))
         for num,i  in  enumerate(center):
@@ -282,8 +274,8 @@ class EvacMcarlo():
 
         return leaders
 
-
-    def clustering(self, positions):
+# }}}
+    def _clustering(self, floor, positions):# {{{
         """clustering evacuues in the room, finding leaders in groups by cluster_leader method
             which tells who to follow, naming agent is it follower or active"""
         ms = MeanShift()
@@ -302,7 +294,52 @@ class EvacMcarlo():
             else:
                 e_type.append("FOLLOWER")
 
-        return labels, who_to_follow, e_type
+        self.groups[floor]+=list(labels)
+        self.leaders[floor]+=list(who_to_follow)
+        self.e_type[floor]+=list(e_type)
+# }}}
+    def _cluster_coloring(self):# {{{
+        '''
+        We have 9 colors for clusters and 1 color for the leader of the cluster
+        Colors are defined in aamks/inc.json as color_0, color_1, ...
+        '''
 
+        # self._evac_conf['FLOORS_DATA']['0']['EVACUEES']:
+        # f0: OrderedDict([('ORIGIN'  , (655  , 1200)) , ('COMPA' , 'r1') , ('CLUSTER' , 0) , ('LEADER' , 1) , ('ETYPE' , 'FOLLOWER')])
+        # f1: OrderedDict([('ORIGIN'  , (745  , 1255)) , ('COMPA' , 'r1') , ('CLUSTER' , 0) , ('LEADER' , 1) , ('ETYPE' , 'ACTIVE')])
+        # f2: OrderedDict([('ORIGIN'  , (770  , 1185)) , ('COMPA' , 'r1') , ('CLUSTER' , 0) , ('LEADER' , 1) , ('ETYPE' , 'FOLLOWER')])
+        # f3: OrderedDict([('ORIGIN'  , (550  , 465))  , ('COMPA' , 'r1') , ('CLUSTER' , 1) , ('LEADER' , 5) , ('ETYPE' , 'FOLLOWER')])
+
+        anim=OrderedDict([("simulation_id",1), ("simulation_time",0), ("time_shift",0)])
+
+        anim_evacuees=[OrderedDict(), OrderedDict()]
+        anim_rooms_opacity=[OrderedDict(), OrderedDict()]
+        color_iterator=0
+        for floor,data in self._evac_conf['FLOORS_DATA'].items():
+            dd(data['EVACUEES'])
+        exit()
+        #     frame=[]
+        #     for room,rooms in floors.items():
+        #         for cid,clusters in rooms.items():
+        #             color_iterator+=1
+        #             for agent in clusters['agents']:
+        #                 frame.append([agent[0],agent[1],0,0,str(color_iterator%9),1])
+        #             frame.append([clusters['leader'][0], clusters['leader'][1], 0, 0, str(9),1])
+        #             
+        #             anim_evacuees[0][floor]=frame
+        #             anim_evacuees[1][floor]=frame
+        #             anim_rooms_opacity[0][floor]={}
+        #             anim_rooms_opacity[1][floor]={}
+        # anim['animations']=OrderedDict([("evacuees", anim_evacuees), ("rooms_opacity", anim_rooms_opacity)]) 
+        # self._write_anim_zip(anim)
+        # Vis({'highlight_geom': None, 'anim': None, 'title': 'Clustering', 'srv': 1, 'anim': "1/clustering.zip"})
+
+# }}}
+    def _write_anim_zip(self,anim):# {{{
+        zf = zipfile.ZipFile("{}/workers/{}/clustering.zip".format(os.environ['AAMKS_PROJECT'], 1) , mode='w', compression=zipfile.ZIP_DEFLATED)
+        try:
+            zf.writestr("anim.json", json.dumps(anim))
+        finally:
+            zf.close()
 
 # }}}
