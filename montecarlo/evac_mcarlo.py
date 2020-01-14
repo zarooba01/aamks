@@ -264,15 +264,15 @@ class EvacMcarlo():
         for floor in self.floors:
             m[floor]=self.dispatched_evacuees[floor]
         self.s.query('INSERT INTO dispatched_evacuees VALUES (?)', (json.dumps(m),))
-
-    def _cluster_leader(self, center, points):
+# }}}
+    def _cluster_leader(self, center, points):# {{{
         leaders = []
         points = tuple(map(tuple, points))
         for num, i in enumerate(center):
             dist_2 = np.sum((points - i) ** 2, axis=1)
             leaders.append(np.argmin(dist_2))
         return leaders
-
+# }}}
     def _cluster_leader_positions(self, center, points):# {{{
         points = tuple(map(tuple, points))
         dist_2 = np.sum((points - center) ** 2, axis=1)
@@ -316,7 +316,7 @@ class EvacMcarlo():
                 if e[2] not in self._dispatched_rooms[floor]:
                     self._dispatched_rooms[floor][e[2]]=[]
                 self._dispatched_rooms[floor][e[2]].append((e[0], e[1]))
-
+# }}}
     def _cluster_coloring(self):# {{{
         '''
         We have 9 colors for clusters and 1 color for the leader of the cluster
