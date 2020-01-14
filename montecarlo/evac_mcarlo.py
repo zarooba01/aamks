@@ -57,9 +57,8 @@ class EvacMcarlo():
             self._static_evac_conf()
             self._dispatch_evacuees()
             self._make_evac_conf()
-
-            self._cluster_coloring()
         self._evacuees_static_animator()
+        self._cluster_coloring()
 
 
 # }}}
@@ -383,12 +382,11 @@ class EvacMcarlo():
         anim['animations'] = OrderedDict([("evacuees", anim_evacuees), ("rooms_opacity", anim_rooms_opacity)])
         simulation_name = str(self._sim_id)+"/clustering.zip"
         self._write_anim_zip(anim)
-        dd(anim)
-        Vis({'highlight_geom': None, 'anim': None, 'title': 'Clustering', 'srv': 1, 'anim':simulation_name})
+        Vis({'highlight_geom': None, 'anim': None, 'title': 'Clustering.{}'.format(self._sim_id), 'srv': 1, 'anim':simulation_name})
 
 # }}}
     def _write_anim_zip(self,anim):# {{{
-        zf = zipfile.ZipFile("{}/workers/{}/clustering.zip".format(os.environ['AAMKS_PROJECT'], 1) , mode='w', compression=zipfile.ZIP_DEFLATED)
+        zf = zipfile.ZipFile("{}/workers/{}/clustering.zip".format(os.environ['AAMKS_PROJECT'], self._sim_id) , mode='w', compression=zipfile.ZIP_DEFLATED)
         try:
             zf.writestr("anim.json", json.dumps(anim))
         finally:
