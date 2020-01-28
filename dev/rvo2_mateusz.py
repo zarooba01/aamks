@@ -26,6 +26,8 @@ import copy
 import math
 import matplotlib.pyplot as plt
 from staircase import Staircase, Queue
+import numpy as np
+from scipy import stats
 #s.query("select count(name), min(x0), max(x1) from world2d where name LIKE 's4|%'")[0].values()
 #s.query("select y0, y1 from world2d where name LIKE 's4|1'")[0].values()
 
@@ -142,13 +144,18 @@ class EvacEnv:
     def _run(self):# {{{
         x = []
         y = []
-        for t in range(320):
+        yyy = []
+        for t in range(100):
             self.sim.doStep()
             self._update()
             self._add_to_staircase()
 
             K = [copy.deepcopy(k.counter) for k in self.Que.ques]
             wszyscy = self.Que.total_number_of_people()
+            wszyscy2 = 0
+            for i in self.waitings.values():
+                wszyscy2+=len(i)
+            wszyscy+=wszyscy2
 
             self.Que.move()
 
@@ -160,13 +167,33 @@ class EvacEnv:
                 krok += len([x for x,y in zip(K[i].items(), J[i].items()) if len(x[1]) != len(y[1])])
                 stop += len([x[0] for x, y in zip(K[i].items(), J[i].items()) if x[1][2] == y[1][2] and len(y[1])<4])
             if wszyscy>0:
-                x.append(self.Que.density2(wszyscy))
+                a = self.Que.density2(wszyscy)
+#x.append(a)
+                x.append(t)
                 y.append(round(krok/wszyscy*100, 2))
+                yy = 0.42*(1/a)**(1/3)
+                yyy.append(yy)
 
         plt.plot(x,y, "o")
+        #for a,b in zip(x,y):
+            #print(a,b)
+        #plt.scatter(x, y)
         plt.xlabel('Density [%]')
         plt.ylabel('Speed [%]')
-        #plt.show()# }}}
+
+        degree = 2
+        poly_fit = np.poly1d(np.polyfit(x, y, degree))
+        xx = np.linspace(0, 100, num=100)
+        asdy = np.array(yyy)/max(yyy)/0.01
+        plt.plot(xx, asdy, linestyle="-")
+
+        plt.plot(xx, poly_fit(xx), c='r', linestyle="-")
+        #plt.grid(True)
+
+        #slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+        #print(r_value**2)
+        #print(poly_fit)
+        plt.show()# }}}
         #plt.savefig("/home/mateusz/Pulpit/praca/Fig_3.png")
 
         #self.Que.count()
@@ -175,3 +202,5 @@ class EvacEnv:
 e=EvacEnv()
 e._run()
 e._write_zip()
+# więcej pięter 
+# fave, jednostki
