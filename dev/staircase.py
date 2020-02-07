@@ -195,7 +195,8 @@ class Staircase:
         self.offsety = offsety
         self.insert = 0
         self.lenght = (self.width**2+self.height**2)**(1/2)
-        self.floor_space = int((self.width+self.lenght)/50)
+        #self.floor_space = int((self.width+self.lenght)/50)
+        self.floor_space = 10
         self.ques = self.create_queues()
         self.positions = self.create_positions() # }}}
     def create_queues(self):# {{{

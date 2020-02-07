@@ -33,7 +33,7 @@ from scipy import stats
 
 class EvacEnv:
     def __init__(self):# {{{
-        self.Que = Staircase()
+        self.Que = Staircase(floors=9)
         self.json=Json()
         self.s=Sqlite("{}/aamks.sqlite".format(os.environ['AAMKS_PROJECT']))
 
@@ -61,14 +61,10 @@ class EvacEnv:
             self.sim.setAgentPrefVelocity(ii, (0,0))
             self.agents[aa]['behaviour']='random'
             self.agents[aa]['origin']=(i['x0'],i['y0'])
-            if int(aa[1:])<69:
-                self.agents[aa]['target']=(990, 325)
-            elif int(aa[1:])>=69 and int(aa[1:])<132:
-                self.agents[aa]['target']=(990, 1510)
-            elif int(aa[1:])>=132 and int(aa[1:])<199:
-                self.agents[aa]['target']=(2300, 335)
-            elif int(aa[1:])>=199 and int(aa[1:])<=269:
-                self.agents[aa]['target']=(2300, 1480)
+            if int(aa[1:])<145:
+                self.agents[aa]['target']=(1010, i['y0'])
+            else:
+                self.agents[aa]['target']=(2290, i['y0'])
         self._positions()
 # }}}
     def _load_obstacles(self):# {{{
@@ -87,9 +83,21 @@ class EvacEnv:
         dy=a['target'][1] - self.sim.getAgentPosition(a['id'])[1]
         self.sim.setAgentPrefVelocity(a['id'], (dx,dy))
         if abs(dx) < 60:
-            if self.sim.getAgentPosition(a['id'])[1] < 705:
+            if self.sim.getAgentPosition(a['id'])[1] < 300:
+                floor = 8
+            elif self.sim.getAgentPosition(a['id'])[1] > 385 and self.sim.getAgentPosition(a['id'])[1] < 685:
+                floor = 7
+            elif self.sim.getAgentPosition(a['id'])[1] > 785 and self.sim.getAgentPosition(a['id'])[1] < 1085:
+                floor = 6
+            elif self.sim.getAgentPosition(a['id'])[1] > 1125 and self.sim.getAgentPosition(a['id'])[1] < 1425:
+                floor = 5
+            elif self.sim.getAgentPosition(a['id'])[1] > 1516 and self.sim.getAgentPosition(a['id'])[1] < 1830:
+                floor = 4
+            elif self.sim.getAgentPosition(a['id'])[1] > 1971 and self.sim.getAgentPosition(a['id'])[1] < 2196:
+                floor = 3
+            elif self.sim.getAgentPosition(a['id'])[1] > 2250 and self.sim.getAgentPosition(a['id'])[1] < 2550:
                 floor = 2
-            elif self.sim.getAgentPosition(a['id'])[1] > 705 and self.sim.getAgentPosition(a['id'])[1] < 1850:
+            elif self.sim.getAgentPosition(a['id'])[1] > 2651 and self.sim.getAgentPosition(a['id'])[1] < 2837:
                 floor = 1
             else:
                 floor = 0
@@ -134,8 +142,10 @@ class EvacEnv:
 #liczba oczekujących na danym piętrze
                 agentname, agentid = self.waitings[floor][0]
                 if self.Que.add_to_queues(floor, agentid):
+                    #self.agents[agentname]['target']=(19750, 3570)
+                    #self.sim.setAgentPosition(agentid, (1750,3570))
                     self.agents[agentname]['target']=(19750, 3570)
-                    self.sim.setAgentPosition(agentid, (1750,3570))
+                    self.sim.setAgentPosition(agentid, (3750,3570))
                     del self.waitings[floor][0]
                     if len(self.waitings[floor])==0:
                         del self.waitings[floor]
@@ -144,8 +154,10 @@ class EvacEnv:
     def _run(self):# {{{
         x = []
         y = []
+        xx = []
         yyy = []
-        for t in range(100):
+        ay = []
+        for t in range(550):
             self.sim.doStep()
             self._update()
             self._add_to_staircase()
@@ -155,7 +167,6 @@ class EvacEnv:
             wszyscy2 = 0
             for i in self.waitings.values():
                 wszyscy2+=len(i)
-            wszyscy+=wszyscy2
 
             self.Que.move()
 
@@ -168,32 +179,44 @@ class EvacEnv:
                 stop += len([x[0] for x, y in zip(K[i].items(), J[i].items()) if x[1][2] == y[1][2] and len(y[1])<4])
             if wszyscy>0:
                 a = self.Que.density2(wszyscy)
-#x.append(a)
+                xx.append(a)
                 x.append(t)
                 y.append(round(krok/wszyscy*100, 2))
-                yy = 0.42*(1/a)**(1/3)
-                yyy.append(yy)
+                ay.append(round(krok/(wszyscy+wszyscy2)*100, 2))
+                #yy = 0.42*(1/a)**(1/3)
+                #yyy.append(yy)
+            if wszyscy ==0 and t>100:
+                print(t)
+                break
 
-        plt.plot(x,y, "o")
+        red, =plt.plot(x,y, "o", color="red", markersize="8")
+        blue, =plt.plot(x,ay, "o")
+        plt.legend([red, blue], ["Speed on the staircase","Speed with waiting people"], loc="center right")
         #for a,b in zip(x,y):
             #print(a,b)
         #plt.scatter(x, y)
+        plt.xlabel('Time [steps]')
+        plt.ylabel('Speed [%]')
+        plt.savefig("/home/mateusz/Pulpit/praca/time_speed.png")
+        plt.show()
+
+        ob, = plt.plot(xx,y, "o")
         plt.xlabel('Density [%]')
         plt.ylabel('Speed [%]')
+        plt.savefig("/home/mateusz/Pulpit/praca/density_speed.png")
+        plt.show()
+        #degree = 2
+        #poly_fit = np.poly1d(np.polyfit(x, y, degree))
+        #xx = np.linspace(0, 100, num=100)
+        #asdy = np.array(yyy)/max(yyy)/0.01
+        #plt.plot(xx, asdy, linestyle="-")
 
-        degree = 2
-        poly_fit = np.poly1d(np.polyfit(x, y, degree))
-        xx = np.linspace(0, 100, num=100)
-        asdy = np.array(yyy)/max(yyy)/0.01
-        plt.plot(xx, asdy, linestyle="-")
-
-        plt.plot(xx, poly_fit(xx), c='r', linestyle="-")
+        #plt.plot(xx, poly_fit(xx), c='r', linestyle="-")
         #plt.grid(True)
 
         #slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
         #print(r_value**2)
         #print(poly_fit)
-        plt.show()# }}}
         #plt.savefig("/home/mateusz/Pulpit/praca/Fig_3.png")
 
         #self.Que.count()
