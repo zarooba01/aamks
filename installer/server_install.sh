@@ -101,8 +101,7 @@ ExecStart=/usr/sbin/gearmand --listen=0.0.0.0 --pid-file=/run/gearman/server.pid
 WantedBy=multi-user.target
 EOF
 	echo; echo;
-	sudo systemctl daemon-reload
-	sudo systemctl restart gearman-job-server.service
+	sudo service gearman-job-server.service restart
 	echo; echo;
 	echo "The line below should be showing gearmand --listen=0.0.0.0"
 	echo; echo;
