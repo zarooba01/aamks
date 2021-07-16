@@ -79,7 +79,6 @@ sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw 'aamks' && {
 	echo "Yet another idea is to listen on the secure 127.0.0.1:4730."
 	echo "You may want to edit /lib/systemd/system/gearman-job-server.service youself after this setup completes."
 	echo; echo;
-	cat /lib/systemd/system/gearman-job-server.service
 	echo; echo;
 	echo "<Enter> accepts to change to --listen=0.0.0.0, <ctrl+c> cancels"
 	read
