@@ -48,30 +48,12 @@ echo "<Enter> accepts, <ctrl+c> cancels"
 read
 
 
-sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw 'aamks' && { 
-	echo "Aamks already exists in psql. Do you wish to remove Aamks database?";
-	echo; echo;
-	echo 'sudo -u postgres psql -c "DROP DATABASE aamks"'
-	echo 'sudo -u postgres psql -c "DROP USER aamks"' 
-	echo; echo;
-	echo "<Enter> accepts, <ctrl+c> cancels"
-	read
-	sudo -u postgres psql -c "DROP DATABASE aamks"
-	sudo -u postgres psql -c "DROP USER aamks" 
-
-	# [ $AAMKS_PG_PASS == 'secret' ] && { 
-	# 	echo "Password for aamks psql user needs to be changed from the default='secret'. It must match the AAMKS_PG_PASS in your ~/.bashrc."; 
-	# 	echo
-	# 	exit;
-	# } 
-} 
-
 [ "X$AAMKS_WORKER" == "Xgearman" ] && { 
 	# Buggy gearman hasn't been respecting /etc/ for ages now. Therefore we act directly on the /lib
 	# Normally we would go with:
-	# echo "PARAMS=\"--listen=$AAMKS_SERVER\"" | sudo tee /etc/default/gearman-job-server
-	sudo apt-get --yes install gearman
-	echo; echo;
+	# echo "PARAMS=\"--listen=$AAMKS_SERVER\"" | tee /etc/default/gearman-job-server
+	apt-get --yes install gearman
+echo; echo;
 	echo "Gearmand (job server) will be configured to --listen on all interfaces (0.0.0.0) or whatever else you wish."
 	echo "Gearmand has no authorization mechanisms and its the responsibility of the users to secure the environment."
 	echo "One idea is a firewall rule, that only workers are allowed to connect to 0.0.0.0:4730."
@@ -85,7 +67,7 @@ sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw 'aamks' && {
 	read
 	echo; echo;
 	
-	cat << EOF | sudo tee /lib/systemd/system/gearman-job-server.service
+	cat << EOF | tee /lib/systemd/system/gearman-job-server.service
 [Unit]
 Description=gearman job control server
 
@@ -101,12 +83,11 @@ ExecStart=/usr/sbin/gearmand --listen=0.0.0.0 --pid-file=/run/gearman/server.pid
 WantedBy=multi-user.target
 EOF
 	echo; echo;
-	sudo systemctl daemon-reload
-	sudo systemctl restart gearman-job-server.service
+	systemctl restart gearman-job-server.service
 	echo; echo;
 	echo "The line below should be showing gearmand --listen=0.0.0.0"
 	echo; echo;
-	sudo ps auxw | grep gearman | grep listen
+	ps auxw | grep gearman | grep listen
 	echo; echo;
 	echo "<Enter>"
 	read
@@ -116,23 +97,23 @@ EOF
 
 
 
-sudo mkdir -p /var/www/ssl/
-sudo rm -rf /var/www/ssl/aamks 
-sudo ln -sf $AAMKS_PATH/gui /var/www/ssl/aamks
+mkdir -p /var/www/ssl/
+rm -rf /var/www/ssl/aamks 
+ln -sf $AAMKS_PATH/gui /var/www/ssl/aamks
 
 USER=`id -ru`
 [ "X$USER" == "X0" ] && { echo "Don't run as root / sudo"; exit; }
 
-sudo locale-gen en_US.UTF-8
-sudo apt-get update 
-sudo apt-get --yes install postgresql subversion python3-pip python3-psycopg2 xdg-utils apache2 php-pgsql pdf2svg unzip libapache2-mod-php 
-sudo -H pip3 install webcolors pyhull colour shapely scipy numpy sns seaborn statsmodels # TODO: do we need these in master? PyQt5 ete3 sklearn. pip fails at PyQt5.
-#sudo -H pip3 install webcolors pyhull colour shapely scipy numpy sns seaborn statsmodels PyQt5 ete3 sklearn
+locale-gen en_US.UTF-8
+apt-get update 
+apt-get --yes install postgresql subversion python3-pip python3-psycopg2 xdg-utils apache2 php-pgsql pdf2svg unzip libapache2-mod-php 
+pip3 install webcolors pyhull colour shapely scipy numpy sns seaborn statsmodels # TODO: do we need these in master? PyQt5 ete3 sklearn. pip fails at PyQt5.
+#pip3 install webcolors pyhull colour shapely scipy numpy sns seaborn statsmodels PyQt5 ete3 sklearn
 
 
 # www-data user needs AAMKS_PG_PASS
 temp=`mktemp`
-sudo cat /etc/apache2/envvars | grep -v AAMKS_ | grep -v umask > $temp
+cat /etc/apache2/envvars | grep -v AAMKS_ | grep -v umask > $temp
 echo "umask 0002" >> $temp
 echo "export AAMKS_SERVER='$AAMKS_SERVER'" >> $temp
 echo "export AAMKS_PATH='$AAMKS_PATH'" >> $temp
@@ -143,24 +124,24 @@ echo "export AAMKS_USE_GMAIL='$AAMKS_USE_GMAIL'" >> $temp
 echo "export AAMKS_GMAIL_USERNAME='$AAMKS_GMAIL_USERNAME'" >> $temp
 echo "export AAMKS_GMAIL_PASSWORD='$AAMKS_GMAIL_PASSWORD'" >> $temp
 echo "export PYTHONPATH='$PYTHONPATH'" >> $temp
-sudo cp $temp /etc/apache2/envvars
+cp $temp /etc/apache2/envvars
 
 echo "umask 0002" >> $temp
 
 
 echo; echo; echo  "sudo service apache2 restart..."
-sudo service apache2 restart
+service apache2 restart
 rm $temp
 
-sudo mkdir -p "$AAMKS_PROJECT"
-sudo cp -r $AAMKS_PATH/installer/demo /home/aamks_users/demo@aamks/
-sudo cp -r $AAMKS_PATH/installer/aamksconf.json /etc/
-sudo chown -R $USER:$USER /etc/aamksconf.json
+mkdir -p "$AAMKS_PROJECT"
+cp -r $AAMKS_PATH/installer/demo /home/aamks_users/demo@aamks/
+cp -r $AAMKS_PATH/installer/aamksconf.json /etc/
+chown -R $USER:$USER /etc/aamksconf.json
 
 
 [ "X$AAMKS_USE_GMAIL" == "X1" ] && { 
 	# TODO - instructables for sending mail via Gmail
-	sudo apt-get --yes install composer
+	apt-get --yes install composer
 	composer require phpmailer/phpmailer
 	mv vendor $AAMKS_PATH/gui
 }
@@ -168,15 +149,11 @@ sudo chown -R $USER:$USER /etc/aamksconf.json
 # From now on, each file written to /home/aamks_users will belong to www-data group.
 # Solves the problem of shell users vs www-data user permissions of new files.
 # But you need to take care of shell users yourself: add them to www-data group in /etc/group.
-sudo chown -R $USER:www-data /home/aamks_users
-sudo chmod -R g+w /home/aamks_users
-sudo chmod -R g+s /home/aamks_users
-sudo find /home/aamks_users -type f -exec chmod 664 {} \;
+chown -R $USER:www-data /home/aamks_users
+chmod -R g+w /home/aamks_users
+chmod -R g+s /home/aamks_users
+find /home/aamks_users -type f -exec chmod 664 {} \;
 
-sudo -u postgres psql -c 'DROP USER aamks' 2>/dev/null
-sudo -u postgres psql -c 'CREATE DATABASE aamks' 2>/dev/null
-sudo -u postgres psql -c "CREATE USER aamks WITH PASSWORD '$AAMKS_PG_PASS'";
-sudo -u postgres psql -f sql.sql
 bash play.sh
 
 echo
