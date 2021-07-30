@@ -43,6 +43,7 @@ echo "AAMKS_USE_GMAIL: $AAMKS_USE_GMAIL"
 echo "AAMKS_GMAIL_USERNAME: $AAMKS_GMAIL_USERNAME"
 echo "AAMKS_GMAIL_PASSWORD: $AAMKS_GMAIL_PASSWORD"
 echo "PYTHONPATH: $PYTHONPATH"
+echo "zarooba fork"
 echo; echo;
 echo "<Enter> accepts, <ctrl+c> cancels"
 read
