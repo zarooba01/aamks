@@ -102,7 +102,7 @@ WantedBy=multi-user.target
 EOF
 	echo; echo;
 	echo; echo;
-	service gearman-job-server.service restart
+	service gearman-job-server restart
 	echo "The line below should be showing gearmand --listen=0.0.0.0"
 	echo; echo;
 	ps auxw | grep gearman | grep listen
