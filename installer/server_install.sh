@@ -119,8 +119,8 @@ mkdir -p /var/www/ssl/
 rm -rf /var/www/ssl/aamks 
 ln -sf $AAMKS_PATH/gui /var/www/ssl/aamks
 
-USER=`id -ru`
-[ "X$USER" == "X0" ] && { echo "Don't run as root / sudo"; exit; }
+#USER=`id -ru`
+#[ "X$USER" == "X0" ] && { echo "Don't run as root / sudo"; exit; }
 
 locale-gen en_US.UTF-8
 apt-get update 
