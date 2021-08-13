@@ -2,8 +2,8 @@
 
 # should match /usr/local/aamks/gui/inc.php: private function mk_default_preferences()
 PREFS='{"apainter_editor": "text", "navmesh_debug": 1, "apainter_labels": 1, "partitioning_debug": 0 }'; 
-sudo -u postgres psql -f sql.sql
-sudo -u postgres psql aamks -c "
+psql -f sql.sql
+psql aamks -c "
 DELETE FROM users;
 INSERT INTO users(active_scenario, user_photo , user_name , password, email, preferences) values(3 , '/aamks/logo.svg' , 'Karol Kreński'    , 'cf87b610767de89e73f6', 'mimoohowy@gmail.com', '$PREFS');
 INSERT INTO users(active_scenario, user_photo , user_name , password, email, preferences) values(1 , '/aamks/logo.svg' , 'Stanisław Łazowy' , 'cf87b610767de89e73f6', 'stanislaw.lazowy@gmail.com', '$PREFS');
@@ -25,9 +25,9 @@ INSERT INTO scenarios(project_id,scenario_name) values(2,'three');
 # psql aamks -c "SELECT * FROM scenarios"
 # psql aamks -c "SELECT * FROM users"
 # psql aamks -c "\d "
-sudo rm -rf /home/aamks_users/mimoohowy@gmail.com/
+rm -rf /home/aamks_users/mimoohowy@gmail.com/
 mkdir -p /home/aamks_users/mimoohowy@gmail.com/
 cp -r demo/ /home/aamks_users/mimoohowy@gmail.com/demo
-sudo chmod -R g+w /home/aamks_users/
-sudo chmod -R g+s /home/aamks_users/
-sudo chown -R $USER:www-data /home/aamks_users
+chmod -R g+w /home/aamks_users/
+chmod -R g+s /home/aamks_users/
+chown -R $USER:www-data /home/aamks_users
