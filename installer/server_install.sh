@@ -49,16 +49,16 @@ echo "<Enter> accepts, <ctrl+c> cancels"
 read
 
 
-psql -lqt | cut -d \| -f 1 | grep -qw 'aamks' && { 
+su postgres psql -lqt | cut -d \| -f 1 | grep -qw 'aamks' && { 
 	echo "Aamks already exists in psql. Do you wish to remove Aamks database?";
 	echo; echo;
-	echo 'psql -c "DROP DATABASE aamks"'
-	echo 'psql -c "DROP USER aamks"' 
+	echo 'su postgres psql -c "DROP DATABASE aamks"'
+	echo 'su postgres psql -c "DROP USER aamks"' 
 	echo; echo;
 	echo "<Enter> accepts, <ctrl+c> cancels"
 	read
-	psql -c "DROP DATABASE aamks"
-	psql -c "DROP USER aamks" 
+	su postgres psql -c "DROP DATABASE aamks"
+	su postgres psql -c "DROP USER aamks" 
 
 	# [ $AAMKS_PG_PASS == 'secret' ] && { 
 	# 	echo "Password for aamks psql user needs to be changed from the default='secret'. It must match the AAMKS_PG_PASS in your ~/.bashrc."; 
