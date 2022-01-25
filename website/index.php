@@ -94,7 +94,7 @@ Core developers
 Contributors
 <ul>
 <li>Andrzej Krauze
-<li>Hubert Zawistowski
+<li>Hubert Zawistowski sss
 <li>Mateusz Mackiewicz
 <li>Mateusz Zimny
 <li>Simo Hostikka
