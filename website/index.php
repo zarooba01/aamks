@@ -3,7 +3,6 @@
 $menu=" 
 <ul>
 <li class='lnav'><a href=?node=about>About</a>
-<li class='lnav'><a href=?node=download>Get AAMKS on your system</a>
 <li class='lnav'><a style='color: #f8f' href=?node=devel>Try out Aamks</a>
 <li class='lnav'><a target=_blank href=https://www.youtube.com/channel/UCKhHI32-1TQL6AKQ4IdDRLg>Youtube</a>
 <li class='lnav'><a href=?node=tests>Tests</a>
@@ -94,19 +93,13 @@ Core developers
 Contributors
 <ul>
 <li>Andrzej Krauze
-<li>Hubert Zawistowski sss
+<li>Hubert Zawistowski
 <li>Mateusz Mackiewicz
 <li>Mateusz Zimny
 <li>Simo Hostikka
 <li>Stanisław Łazowy
 <li>Wojtek Kowalski
 </ul>
-
-");
-
-$nodes['download']=array("Get AAMKS on your system", /*{{{*/
-"
-Instruction under construction
 
 ");
 /*}}}*/
