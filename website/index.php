@@ -10,7 +10,6 @@ $menu="
 <li class='lnav'><a target=_blank href=https://github.com/aamks/aamks>Github</a>
 <li class='lnav'><a href=?node=authors>Authors</a>
 <li class='lnav'><a href=?node=download>Get AAMKS on your system</a>
-
 </ul>
 ";
 /*}}}*/
@@ -104,11 +103,11 @@ Contributors
 
 ");
 /*}}}*/
-/*}}}*/
+
 $nodes['download']=array("Get AAMKS on your system", /*{{{*/
-'
+"
 test
-');
+");
 
 #Engine/*{{{*/
 if(!isset($_GET['node'])){
