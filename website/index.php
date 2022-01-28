@@ -103,11 +103,6 @@ Contributors
 ");
 /*}}}*/
 
-$nodes['download']=array("Get AAMKS on your system", /*{{{*/
-"
-test
-");
-
 #Engine/*{{{*/
 if(!isset($_GET['node'])){
 	$_GET['node']='about';
