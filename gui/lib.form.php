@@ -360,6 +360,16 @@ function get_template_defaults($q) {/*{{{*/
     "NSHEVS": {
         "activation_time": ""
     },
+    "RESCUE": {
+        "detection": 20,
+        "t1": 20,
+        "t2": 20,
+        "service": 20,
+        "alarm": 20,
+        "arrival": 20,
+        "diagnosis": 20,
+        "estignuish": 20
+    },
     "outdoor_temperature": {
         "mean": 25,
         "sd": 2

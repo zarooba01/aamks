@@ -19,7 +19,7 @@ function read_aamks_conf_json() { /*{{{*/
 		$_SESSION['nn']->fatal("Broken json: $json_path");
 	} 
 	return $conf;
-}
+}	
 /*}}}*/
 
 function droplist_fire_model($in) {/*{{{*/
@@ -261,6 +261,7 @@ function form_fields_advanced() { #{{{
 	echo "<tr><td><a class='rlink switch' id='smoke_detectors'>smoke detectors</a><td>".form_plain_arr_switchable('smoke_detectors',$smoke_detectors); 
 	echo "<tr><td><a class='rlink switch' id='sprinklers'>sprinklers</a><td>".form_plain_arr_switchable('sprinklers',$sprinklers); 
 	echo "<tr><td><a class='rlink switch' id='NSHEVS'>NSHEVS</a><td>".form_plain_arr_switchable('NSHEVS',$NSHEVS); 
+	echo "<tr><td><a class='rlink switch' id='RESCUE'>RESCUE</a><td>".form_plain_arr_switchable('RESCUE',$RESCUE);  
 	echo "<tr><td>".get_help('windows')."<td>".form_arr('windows',$windows); 
 	echo "<tr><td>".get_help('vents_open')."<td>".form_assoc('vents_open',$vents_open); 
 	echo "<tr><td>".get_help('c_const')."<td><input autocomplete=off type=text automplete=off size=10 name=post[c_const] value='$c_const'>"; 
@@ -309,6 +310,9 @@ function form_fields_easy() { #{{{
 	echo "<tr><td><a class='rlink switch' id='smoke_detectors'>smoke detectors</a><td>".form_plain_arr_switchable('smoke_detectors',$smoke_detectors); 
 	echo "<tr><td><a class='rlink switch' id='sprinklers'>sprinklers</a><td>".form_plain_arr_switchable('sprinklers',$sprinklers); 
 	echo "<tr><td><a class='rlink switch' id='NSHEVS'>NSHEVS</a><td>".form_plain_arr_switchable('NSHEVS',$NSHEVS); 
+	$RESCUE = ["zmienna1"=>"wartosc1", "zmienana2"=>"wartosc2", "zmienna3"=>"wartosc3"];  // switchable nie widzi zmiennej rescu tak jak powiniene - gdzie znajdują sie zmienne np. $nshevs? 
+	echo "<tr><td><a class='rlink switch' id='RESCUE'>RESCUE</a><td>".form_plain_arr_switchable('RESCUE',$RESCUE);
+	
 	echo "</table>";
 	echo "</form>";
 }

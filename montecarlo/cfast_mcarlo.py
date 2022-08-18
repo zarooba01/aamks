@@ -174,6 +174,7 @@ class CfastMcarlo():
         Fire area is draw from pareto distrubution regarding the BS PD-7974-7. 
         There is lack of vent condition - underventilated fires
         '''
+
         p = pareto(b=self.conf['fire_area']['b'], scale=self.conf['fire_area']['scale'])
         fire_area = round(p.rvs(size=1)[0], 2)
         if fire_area > orig_area:
@@ -183,34 +184,66 @@ class CfastMcarlo():
         hrr_peak=int(self.hrrpua * fire_area)
         self.alpha=int(triangular(hrr_alpha['min'], hrr_alpha['mode'], hrr_alpha['max'])*1000)
 
-        # left
-        t_up_to_hrr_peak = int((hrr_peak/self.alpha)**0.5)
-        interval = int(round(t_up_to_hrr_peak/10))
-        if interval == 0:
-            interval = 10
-        times0 = list(range(0, t_up_to_hrr_peak, interval))+[t_up_to_hrr_peak]
-        hrrs0 = [int((self.alpha * t ** 2)) for t in times0]
+        is_rescue = True #parameter is_resque should be given in conf. in GUI are switchable buttons - how do they actually work - how to add parameter is_resque: true/false 
+        if is_rescue:
+            r= Rescue(self.conf)
 
-        # middle
-        t_up_to_starts_dropping = 15 * 60
-        times1 = [t_up_to_starts_dropping]
-        hrrs1 = [hrr_peak]
+            # left
+            t_up_to_hrr_peak = int((hrr_peak/self.alpha)**0.5)
+            interval = int(round(t_up_to_hrr_peak/10))
+            if interval == 0:
+                interval = 10
+            times0 = list(range(0, t_up_to_hrr_peak, interval))+[t_up_to_hrr_peak]
+            hrrs0 = [int((self.alpha * t ** 2)) for t in times0]
 
-        # right
-        t_up_to_drops_to_zero=t_up_to_starts_dropping+t_up_to_hrr_peak
-        interval = int(round((t_up_to_drops_to_zero - t_up_to_starts_dropping)/10))
-        if interval == 0:
-            interval = 10
-        times2 = list(range(t_up_to_starts_dropping, t_up_to_drops_to_zero, interval))+[t_up_to_drops_to_zero]
-        hrrs2 = [int((self.alpha * (t - t_up_to_drops_to_zero) ** 2)) for t in times2 ]
+            # middle        
+            t_up_to_starts_dropping = r.time   
+            times1 = [t_up_to_starts_dropping]
+            hrrs1 = [hrr_peak]
 
-        times = list(times0 + times1 + times2)
+            # right - starts when fire crew begins putting water
+            k = r.k # estinguish coeficient
+            times2 = list(range(t_up_to_starts_dropping,3*t_up_to_starts_dropping,20))[1:]  # how long should the fire last? / [1:] not do double in times2 
+            hrrs2 = []
+            for t in times2:
+                dt = t-t_up_to_starts_dropping  
+                hrr = int(hrr_peak*math.exp(-k*dt))
+                if hrr > 0.15*hrr_peak: 
+                    hrrs2.append(hrr)
+                else: 
+                    hrrs2.append(int(0.15*hrr_peak))
+
+        if not is_rescue:
+            # left
+            t_up_to_hrr_peak = int((hrr_peak/self.alpha)**0.5)
+            interval = int(round(t_up_to_hrr_peak/10))
+            if interval == 0:
+                interval = 10
+            times0 = list(range(0, t_up_to_hrr_peak, interval))+[t_up_to_hrr_peak]
+            hrrs0 = [int((self.alpha * t ** 2)) for t in times0]
+            
+            # middle
+            t_up_to_starts_dropping = 15 * 60
+            times1 = [t_up_to_starts_dropping]
+            hrrs1 = [hrr_peak]
+
+            # right
+            t_up_to_drops_to_zero=t_up_to_starts_dropping+t_up_to_hrr_peak
+            interval = int(round((t_up_to_drops_to_zero - t_up_to_starts_dropping)/10))
+            if interval == 0:
+                interval = 10
+            times2 = list(range(t_up_to_starts_dropping, t_up_to_drops_to_zero, interval))+[t_up_to_drops_to_zero]
+            hrrs2 = [int((self.alpha * (t - t_up_to_drops_to_zero) ** 2)) for t in times2 ] 
+
+
+        times = list(times0 + times1 + times2)  
         hrrs = list(hrrs0 + hrrs1 + hrrs2)
+
         area = list(npa(hrrs)/hrr_peak * fire_area)
         area = [round(i, 2) for i in area]
 
         h = self.s.query("SELECT * FROM aamks_geom where name = '{}'".format(z[0]['name']))
-        h=int(h[0]['height']/100 * (1-math.log10(uniform(1,10))))
+        h = int(h[0]['height']/100 * (1-math.log10(uniform(1,10))))
 
         params = OrderedDict()
         steps = len(times)
@@ -606,3 +639,54 @@ class CfastMcarlo():
 
 #}}}
 
+
+class Rescue():
+    def __init__(self, conf):
+        self.conf = conf
+        self.t_detection = self.get_detection()
+        self.t_1 = self.get_t1()
+        self.t_2 = self.get_t2()
+        self.t_service = self.get_service()
+        self.t_alarm = self.get_alarm()
+        self.t_arrival = self.get_arrival()
+        self.t_diagnosis = self.get_diagnosis()
+        self.t_estinguish = self.get_estignuish()
+        self.time = self.get_all_times()
+        self.k = 0.016256 
+
+    def get_detection(self):
+        """ """
+        return self.conf["RESCUE"]["detecion"]
+
+    def get_t1(self):
+        """ wpisywane ręcznie """
+        return self.conf["RESCUE"]["t1"]
+
+    def get_t2(self):
+        """ wpisywane ręcznie """
+        return self.conf["RESCUE"]["t2"]
+
+    def get_service(self):
+        """ rozklad statystyczny """
+        return self.conf["RESCUE"]["service"]
+
+    def get_alarm(self):
+        """ rozklad statystyczny """
+        return self.conf["RESCUE"]["alarm"]
+
+    def get_arrival(self):
+        """ rozklad statystyczny """
+        return self.conf["RESCUE"]["arrival"]
+
+    def get_diagnosis(self):
+        """ doliczany z prawdopodobieństwem """
+        return self.conf["RESCUE"]["diagnosis"]
+
+    def get_estignuish(self):
+        """ wpisywane ręcznie """
+        return self.conf["RESCUE"]["estignuish"]
+
+
+    def get_all_times(self):
+        all_times = self.t_detection+ self.t_1 +self.t_2+ self.t_service +self.t_alarm +self.t_arrival +self.t_diagnosis +self.t_estinguish
+        return all_times
