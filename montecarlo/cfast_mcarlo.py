@@ -5,6 +5,7 @@ from collections import OrderedDict
 from numpy.random import choice
 from numpy.random import uniform
 from numpy.random import normal
+from numpy.random import lognormal
 from numpy.random import binomial
 from numpy.random import gamma
 from numpy.random import triangular
@@ -652,7 +653,10 @@ class Rescue():
         self.t_diagnosis = self.get_diagnosis()
         self.t_estinguish = self.get_estignuish()
         self.time = self.get_all_times()
+
+        self.distance = 12.5  #has to be in form
         self.k = 0.016256 
+
 
     def get_detection(self):
         """ """
@@ -668,15 +672,107 @@ class Rescue():
 
     def get_service(self):
         """ rozklad statystyczny """
-        return self.conf["RESCUE"]["service"]
+        alpha = 4.493
+        beta = 0.02947
+        theta = 1/beta
+        service = int(math.ceil(gamma(alpha, theta)))
+
+        return service
+        #return self.conf["RESCUE"]["service"]
 
     def get_alarm(self):
         """ rozklad statystyczny """
-        return self.conf["RESCUE"]["alarm"]
+
+        mean = 4.219 # +/- 0.011
+        sigma = 0.2617 # +/- 0.0097
+        alarm = int(math.ceil(lognormal(mean, sigma))) # liczba z rozkładu zaokrąglona do góry
+
+        return alarm
+        #return self.conf["RESCUE"]["alarm"]
 
     def get_arrival(self):
         """ rozklad statystyczny """
+
+        arrival_data = OrderedDict()
+        arrival_data = {
+            "1": {
+                "day": [0.939, 1.196],
+                "night": [1.104, 1.667]
+                },
+            "2":{
+                "day": [0.766, 1.068],
+                "night": [0.842, 1.120]
+                },         
+            "3":{
+                "day": [1.069, 2,286],
+                "night": [1.116, 2,399]
+                },         
+            "4":{
+                "day": [0.967, 1.673],
+                "night": [0.878, 1.292]
+                },         
+            "5":{
+                "day": [1.107, 2.008],
+                "night": [0.840, 1.073]
+                },         
+            "6":{
+                "day": [1.292, 2.976],
+                "night": [1.009, 1.520]
+                },         
+            "7":{
+                "day": [1.156, 2.050],
+                "night": [1.128, 2.364]
+                },         
+            "8":{
+                "day": [1.311, 2.750],
+                "night": [1.085, 1.803]
+                },         
+            "9":{
+                "day": [1.234, 2.406],
+                "night": [1.289, 2.508]
+                },         
+            "10":{
+                "day": [1.497, 3.366],
+                "night": [1.153, 2.733]
+                },         
+            "11":{
+                "day": [1.164, 1.464],
+                "night": [1.911, 4.819]
+                },           
+            "12":{
+                "day": [0.905, 0.376],
+                "night": [1.995, 4.427]
+                },           
+            "13":{
+                "day": [2.497, 8.045],
+                "night": [1.505, 2.080]
+                },           
+            "14":{
+                "day": [0.987, 0.382],
+                "night": [0.911, -0.262]
+                },           
+            "15":{
+                "day": [0.951, 0.320],
+                "night": [0.594, -1.471]
+                },           
+            "20":{
+                "day": [2.403, 4.866],
+                "night": [2.794, 8.355]
+                },   
+            }    
+
+        distance_params = find_distance_params
+
         return self.conf["RESCUE"]["arrival"]
+    
+    def find_distance_params():
+        for key,value in arrival_data.items():
+            if int(key) <  self.distance: 
+                pass
+            else:  
+                distance_params = value
+                return distance_params
+                break        
 
     def get_diagnosis(self):
         """ doliczany z prawdopodobieństwem """
