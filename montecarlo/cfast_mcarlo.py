@@ -38,6 +38,7 @@ class CfastMcarlo():
         self._sim_id = sim_id
         self._new_psql_log()
         seed(self._sim_id)
+        print(self.conf["RESCUE"])
 
     def read_json(self):
         self.conf=self.json.read("{}/conf.json".format(os.environ['AAMKS_PROJECT']))
@@ -643,24 +644,43 @@ class CfastMcarlo():
 
 class Rescue():
     def __init__(self, conf):
+
         self.conf = conf
+
+        #parametry
+        self.electronic = False #powiadamianie elektroniczne
+        self.time_log = True #printowanie czasów
+        
+        self.hour = 10
+        self.distance_short = 9
+        self.distance_long = 22
+        self.distance = self.get_distnace()
+
+        self.k = 0.016256 
+
+        # powiadamianie elektroniczne
         self.t_detection = self.get_detection()
         self.t_1 = self.get_t1()
         self.t_2 = self.get_t2()
-        self.t_service = self.get_service()
-        self.t_alarm = self.get_alarm()
-        self.t_arrival = self.get_arrival()
-        self.t_diagnosis = self.get_diagnosis()
-        self.t_estinguish = self.get_estignuish()
-        self.time = self.get_all_times()
 
-        self.distance = 12.5  #has to be in form
-        self.k = 0.016256 
+        #powiadamianie telefoniczne
+        self.t_phone_call = self.get_phone_call() #czas od wybuchu pożaru do zauważenia + czas wykonania telefonu
+        self.t_service = self.get_service() #czas obsługi połączenia
 
+        #faza interwencji JOP
+        self.t_alarm = self.get_alarm()  #czas alarmowania
+        self.t_arrival = self.get_arrival() #czas dojazdu
+        self.t_diagnosis = self.get_diagnosis() #czas rozpoznania
+        self.t_estinguish = self.get_estignuish() #czas rozwinięcia gaśniczego
+        
+        self.time = self.get_all_times() #całkowity czas, 
+  
 
+    # --- FAZA POWIADAMIANIA O ZDARZENIU --- 
+    #powiadamianie elektroniczne
     def get_detection(self):
-        """ """
-        return self.conf["RESCUE"]["detecion"]
+        """ wpisywane ręcznie """
+        return self.conf["RESCUE"]["detecion"]   #powinno być detection
 
     def get_t1(self):
         """ wpisywane ręcznie """
@@ -670,29 +690,60 @@ class Rescue():
         """ wpisywane ręcznie """
         return self.conf["RESCUE"]["t2"]
 
+    #powiadamianie telefoniczne
+    def get_phone_call(self):
+        """czas od wybuchu pożaru do zauważaenia + czas od zauważanie pożaru do wykonania telefonu """
+        alpha1 = 1.1927
+        beta1 = 1.4375
+        theta1 = 1/beta1
+        observation = round(gamma(alpha1, theta1),2)
+
+        mean = -0.1849 
+        sigma = 1.3975
+
+        call = round(lognormal(mean, sigma),2)
+        t_phone_call = observation + call 
+        return t_phone_call
+
     def get_service(self):
         """ rozklad statystyczny """
         alpha = 4.493
         beta = 0.02947
         theta = 1/beta
-        service = int(math.ceil(gamma(alpha, theta)))
+        service = round(gamma(alpha, theta),2)
 
         return service
-        #return self.conf["RESCUE"]["service"]
+
+    #  --- FAZA INTERWENCJI JOP
 
     def get_alarm(self):
         """ rozklad statystyczny """
-
         mean = 4.219 # +/- 0.011
         sigma = 0.2617 # +/- 0.0097
-        alarm = int(math.ceil(lognormal(mean, sigma))) # liczba z rozkładu zaokrąglona do góry
-
+        alarm = round(lognormal(mean, sigma),2)
         return alarm
-        #return self.conf["RESCUE"]["alarm"]
+
+
+    def day_or_night(self):
+        if self.hour > 6 and self.hour < 22:
+            return "day"
+        else:
+            return "night"
 
     def get_arrival(self):
         """ rozklad statystyczny """
+        distance_params = self.find_distance_params()
+        day_or_night = self.day_or_night()
+        alpha = distance_params[day_or_night][0]
+        beta = distance_params[day_or_night][1]
+        theta = 1/beta
 
+        arrival_time = round(gamma(alpha, beta),2)
+        return arrival_time
+    
+
+    def find_distance_params(self):
+        """ find parameters of alfa and gamma when distance and is provided"""
         arrival_data = OrderedDict()
         arrival_data = {
             "1": {
@@ -759,30 +810,70 @@ class Rescue():
                 "day": [2.403, 4.866],
                 "night": [2.794, 8.355]
                 },   
-            }    
-
-        distance_params = find_distance_params
-
-        return self.conf["RESCUE"]["arrival"]
-    
-    def find_distance_params():
+            } 
         for key,value in arrival_data.items():
-            if int(key) <  self.distance: 
+            if int(key) < self.distance: 
                 pass
             else:  
                 distance_params = value
                 return distance_params
                 break        
 
-    def get_diagnosis(self):
-        """ doliczany z prawdopodobieństwem """
-        return self.conf["RESCUE"]["diagnosis"]
+    
+    def get_distnace(self):
+        distance = choice(npa([12, 100]), p=[0.9862, 0.0138])
+        return distance
 
+
+    def get_diagnosis(self):
+        """ czas rozpoznania - doliczany z prawdopodobieństwem 0.15 """
+        add_diagnosis = choice([True, False], p=[0.15, 0.85])
+        if add_diagnosis:
+            diagnosis_times =       [1, 2, 3, 4, 5, 7, 10, 15]
+            diagnosis_propability=  [0.01, 0.26, 0.22, 0.06, 0.3, 0.02, 0.08, 0.05]
+            t_diagnosis = choice(npa(diagnosis_times), p=diagnosis_propability)
+        else:
+            t_diagnosis = 0
+        return t_diagnosis
+
+    
     def get_estignuish(self):
         """ wpisywane ręcznie """
         return self.conf["RESCUE"]["estignuish"]
 
 
-    def get_all_times(self):
-        all_times = self.t_detection+ self.t_1 +self.t_2+ self.t_service +self.t_alarm +self.t_arrival +self.t_diagnosis +self.t_estinguish
-        return all_times
+    def get_pre_intervention_time(self):
+        """czas przed rozpoczęciem interwencji (w zależności czy jest to powiadamianie elektroniczne czy telefoniczne"""
+        if self.electronic == True:
+            pre_intervention_time = self.t_detection + self.t_1 + self.t_2
+            if self.time_log == True:
+                print(f"Czas detekcji: {self.t_detection}")
+                print(f"t1 : {self.t_1}")
+                print(f"t2 : {self.t_2}")
+        else:
+            pre_intervention_time = self.t_phone_call + self.t_service
+            if self.time_log == True:
+                print(f"Czas wybuchu pożaru do zawuażenia + do wykonania telefonu?: {self.t_phone_call}")
+                print(f"Czas obsługi połączenia: {self.t_service}")
+
+        return pre_intervention_time
+    
+    def get_intervention_time(self):
+        intrvention_time = self.t_alarm + self.t_arrival + self.t_diagnosis + self.t_estinguish
+        if self.time_log == True:
+            print(f"Czas alarmowania: {self.t_alarm}")
+            print(f"Czas dojazdu: {self.t_arrival}")
+            print(f"Czas rozpoznania: {self.t_diagnosis}")
+            print(f"Czas rozwinięcia gaśniczego: {self.t_estinguish}")
+        return intrvention_time
+
+
+
+    def get_all_times(self): 
+        pre_intervention_time = self.get_pre_intervention_time()
+        intrvention_time = self.get_intervention_time()
+        all_times = pre_intervention_time + intrvention_time
+        return int(all_times)
+
+    def uncertain(main, uncert):
+        return random.uniform(main-uncert, main+uncert)
