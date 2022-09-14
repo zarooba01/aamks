@@ -361,14 +361,14 @@ function get_template_defaults($q) {/*{{{*/
         "activation_time": ""
     },
     "RESCUE": {
-        "detection": 20,
-        "t1": 20,
-        "t2": 20,
-        "service": 20,
-        "alarm": 20,
-        "arrival": 20,
-        "diagnosis": 20,
-        "estignuish": 20
+        "detection" : 20,
+        "t1" : 20,
+        "t2" : 20,
+        "estignuish" : 20,
+        "hour": 14,
+        "distance_short": 7,
+        "distance_long": 12
+        
     },
     "outdoor_temperature": {
         "mean": 25,

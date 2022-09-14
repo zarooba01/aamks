@@ -38,7 +38,7 @@ class CfastMcarlo():
         self._sim_id = sim_id
         self._new_psql_log()
         seed(self._sim_id)
-        print(self.conf["RESCUE"])
+        
 
     def read_json(self):
         self.conf=self.json.read("{}/conf.json".format(os.environ['AAMKS_PROJECT']))
@@ -646,7 +646,7 @@ class Rescue():
     def __init__(self, conf):
 
         self.conf = conf
-
+       
         #parametry
         self.electronic = False #powiadamianie elektroniczne
         self.time_log = True #printowanie czasów
@@ -664,7 +664,8 @@ class Rescue():
         self.t_2 = self.get_t2()
 
         #powiadamianie telefoniczne
-        self.t_phone_call = self.get_phone_call() #czas od wybuchu pożaru do zauważenia + czas wykonania telefonu
+        self.t_observation = self.get_observation() # czas od wybuchu pożaru do zauważenia go
+        self.t_phone_call = self.get_phone_call()  # czas wykonania telefonu
         self.t_service = self.get_service() #czas obsługi połączenia
 
         #faza interwencji JOP
@@ -674,13 +675,14 @@ class Rescue():
         self.t_estinguish = self.get_estignuish() #czas rozwinięcia gaśniczego
         
         self.time = self.get_all_times() #całkowity czas, 
-  
+        if self.time_log:
+            self.print_time_log()
 
     # --- FAZA POWIADAMIANIA O ZDARZENIU --- 
     #powiadamianie elektroniczne
     def get_detection(self):
         """ wpisywane ręcznie """
-        return self.conf["RESCUE"]["detecion"]   #powinno być detection
+        return self.conf["RESCUE"]["detection"]   #powinno być detection
 
     def get_t1(self):
         """ wpisywane ręcznie """
@@ -691,24 +693,24 @@ class Rescue():
         return self.conf["RESCUE"]["t2"]
 
     #powiadamianie telefoniczne
+
+    def get_observation(self):
+        mean = self.uncertain(1.1927, 0.0036)
+        sigma = self.uncertain(1.4375, 0.003)
+        observation = round(lognormal(mean, sigma), 2)
+        return observation
+
     def get_phone_call(self):
         """czas od wybuchu pożaru do zauważaenia + czas od zauważanie pożaru do wykonania telefonu """
-        alpha1 = 1.1927
-        beta1 = 1.4375
-        theta1 = 1/beta1
-        observation = round(gamma(alpha1, theta1),2)
-
-        mean = -0.1849 
-        sigma = 1.3975
-
-        call = round(lognormal(mean, sigma),2)
-        t_phone_call = observation + call 
-        return t_phone_call
+        mean = self.uncertain(-0.1849, 0.041) 
+        sigma = self.uncertain(1.3975, 0.041)
+        phone_call = round(lognormal(mean, sigma), 2)
+        return phone_call
 
     def get_service(self):
-        """ rozklad statystyczny """
-        alpha = 4.493
-        beta = 0.02947
+        """ rozklad statystyczny GAMMA"""
+        alpha = self.uncertain(4.493, 0.02)
+        beta = self.uncertain(0.02947, 0.00013)
         theta = 1/beta
         service = round(gamma(alpha, theta),2)
 
@@ -718,8 +720,8 @@ class Rescue():
 
     def get_alarm(self):
         """ rozklad statystyczny """
-        mean = 4.219 # +/- 0.011
-        sigma = 0.2617 # +/- 0.0097
+        mean = self.uncertain(4.219, 0.011) # +/- 0.011
+        sigma = self.uncertain(0.2617,0.0097) # +/- 0.0097
         alarm = round(lognormal(mean, sigma),2)
         return alarm
 
@@ -734,81 +736,83 @@ class Rescue():
         """ rozklad statystyczny """
         distance_params = self.find_distance_params()
         day_or_night = self.day_or_night()
-        alpha = distance_params[day_or_night][0]
-        beta = distance_params[day_or_night][1]
-        theta = 1/beta
-
-        arrival_time = round(gamma(alpha, beta),2)
+        mean_params = distance_params[day_or_night][0]
+        mean = self.uncertain(mean_params[0],mean_params[1])
+        
+        sigma_params = distance_params[day_or_night][1]
+        sigma = self.uncertain(sigma_params[0],sigma_params[1])
+        
+        arrival_time = round(lognormal(mean, sigma),2)
         return arrival_time
     
 
     def find_distance_params(self):
-        """ find parameters of alfa and gamma when distance and is provided"""
+        """ find parameters of mi and sigma when distance is known"""
         arrival_data = OrderedDict()
         arrival_data = {
             "1": {
-                "day": [0.939, 1.196],
-                "night": [1.104, 1.667]
+                "day": [(5.244, 0.005), (0.513, 0.004)],
+                "night": [(5.344, 0.01), (0.52, 0.007)]
                 },
             "2":{
-                "day": [0.766, 1.068],
-                "night": [0.842, 1.120]
+                "day": [(5.616,0.004 ), (0.378, 0.003)],
+                "night": [( 5.673, 0.006) , (0.41 ,0.004)]
                 },         
             "3":{
-                "day": [1.069, 2,286],
-                "night": [1.116, 2,399]
+                "day": [(5.804, 0.003), (0.335 , 0.002)],
+                "night": [(5.891,0.005 ), (0.352 ,0.003 )]
                 },         
             "4":{
-                "day": [0.967, 1.673],
-                "night": [0.878, 1.292]
+                "day": [( 5.981, 0.003 ), (0.294 ,0.002 )],
+                "night": [(6.047 , 0.005 ), (0.307 , 0.004 )]
                 },         
             "5":{
-                "day": [1.107, 2.008],
-                "night": [0.840, 1.073]
+                "day": [( 6.126, 0.003), (0.274 , 0.002)],
+                "night": [(6.192 ,0.006 ), (0.279 ,0.004 )]
                 },         
             "6":{
-                "day": [1.292, 2.976],
-                "night": [1.009, 1.520]
+                "day": [(6.247 ,0.004 ), (0.252 , 0.003)],
+                "night": [( 6.309, 0.008 ), (0.264 ,0.006 )]
                 },         
             "7":{
-                "day": [1.156, 2.050],
-                "night": [1.128, 2.364]
+                "day": [( 6.355 ,0.005 ), (0.243 , 0.004)],
+                "night": [(6.407, 0.01), (0.24 ,0.007 )]
                 },         
             "8":{
-                "day": [1.311, 2.750],
-                "night": [1.085, 1.803]
+                "day": [(6.443 ,0.006 ), (0.232 ,0.005 )],
+                "night": [(6.479 ,0.013 ), (0.248 ,0.009 )]
                 },         
             "9":{
-                "day": [1.234, 2.406],
-                "night": [1.289, 2.508]
+                "day": [( 6.522, 0.008 ), (0.206 , 0.006)],
+                "night": [(6.569 ,0.017 ), (0.221 ,0.012 )]
                 },         
             "10":{
-                "day": [1.497, 3.366],
-                "night": [1.153, 2.733]
+                "day": [(6.603 ,0.009 ), (0.213 ,0.006 )],
+                "night": [(6.647 ,0.015 ), (0.0204 ,0.011 )]
                 },         
             "11":{
-                "day": [1.164, 1.464],
-                "night": [1.911, 4.819]
+                "day": [(6.685 ,0.013 ), (0.192 , 0.009)],
+                "night": [(6.76 ,0.032 ), (0.251 ,0.022 )]
                 },           
             "12":{
-                "day": [0.905, 0.376],
-                "night": [1.995, 4.427]
+                "day": [(6.758,0.014 ), (0.184 , 0.01)],
+                "night": [(6.819 ,0.029 ), (0.233 ,0.02 )]
                 },           
             "13":{
-                "day": [2.497, 8.045],
-                "night": [1.505, 2.080]
+                "day": [(6.821, 0.024), (0.199 , 0.017)],
+                "night": [(6.818, 0.031), (0.156 , 0.022)]
                 },           
             "14":{
-                "day": [0.987, 0.382],
-                "night": [0.911, -0.262]
+                "day": [(6.901 ,0.031), (0.187 ,0.022 )],
+                "night": [( 6.81, 0.046), (0.131 , 0.033)]
                 },           
             "15":{
-                "day": [0.951, 0.320],
-                "night": [0.594, -1.471]
+                "day": [(6.917, 0.023), (0.142 , 0.017)],
+                "night": [(7.346, 0.129), ( 0.29, 0.091)]
                 },           
             "20":{
-                "day": [2.403, 4.866],
-                "night": [2.794, 8.355]
+                "day": [(7.078 ,0.036 ), (0.268 , 0.025)],
+                "night": [(7.136 ,0.058 ), (0.269 ,0.041)]
                 },   
             } 
         for key,value in arrival_data.items():
@@ -846,34 +850,35 @@ class Rescue():
         """czas przed rozpoczęciem interwencji (w zależności czy jest to powiadamianie elektroniczne czy telefoniczne"""
         if self.electronic == True:
             pre_intervention_time = self.t_detection + self.t_1 + self.t_2
-            if self.time_log == True:
-                print(f"Czas detekcji: {self.t_detection}")
-                print(f"t1 : {self.t_1}")
-                print(f"t2 : {self.t_2}")
         else:
-            pre_intervention_time = self.t_phone_call + self.t_service
-            if self.time_log == True:
-                print(f"Czas wybuchu pożaru do zawuażenia + do wykonania telefonu?: {self.t_phone_call}")
-                print(f"Czas obsługi połączenia: {self.t_service}")
-
+            pre_intervention_time = self.t_observation + self.t_phone_call + self.t_service        
         return pre_intervention_time
     
     def get_intervention_time(self):
-        intrvention_time = self.t_alarm + self.t_arrival + self.t_diagnosis + self.t_estinguish
-        if self.time_log == True:
-            print(f"Czas alarmowania: {self.t_alarm}")
-            print(f"Czas dojazdu: {self.t_arrival}")
-            print(f"Czas rozpoznania: {self.t_diagnosis}")
-            print(f"Czas rozwinięcia gaśniczego: {self.t_estinguish}")
+        intrvention_time = self.t_alarm + self.t_arrival + self.t_diagnosis + self.t_estinguish           
         return intrvention_time
-
-
 
     def get_all_times(self): 
         pre_intervention_time = self.get_pre_intervention_time()
         intrvention_time = self.get_intervention_time()
-        all_times = pre_intervention_time + intrvention_time
+        all_times = pre_intervention_time + intrvention_time            
         return int(all_times)
 
-    def uncertain(main, uncert):
-        return random.uniform(main-uncert, main+uncert)
+    def print_time_log(self):
+            if self.electronic:
+                print(f"Czas detekcji: {self.t_detection}")
+                print(f"t1 : {self.t_1}")
+                print(f"t2 : {self.t_2}")
+            else:
+                print(f"Czas wybuchu pożaru do zawuażenia go {self.t_observation}")
+                print(f"Czas do wykonania telefonu {self.t_phone_call}")
+                print(f"Czas obsługi połączenia: {self.t_service}")
+
+            print(f"Czas alarmowania: {self.t_alarm}")
+            print(f"Czas dojazdu: {self.t_arrival}")
+            print(f"Czas rozpoznania: {self.t_diagnosis}")
+            print(f"Czas rozwinięcia gaśniczego: {self.t_estinguish}")
+            print(f"Całkowity czas: {self.time}")
+
+    def uncertain(self, main, uncert):
+        return round(uniform(main-uncert, main+uncert),4)
